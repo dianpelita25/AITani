@@ -1,0 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Core Colors */
+    --color-background: #F8FAFC; /* light gray background for mobile */
+    --color-foreground: #1F2937; /* dark-gray */
+    --color-border: #E5E7EB; /* neutral-gray */
+    --color-input: #FFFFFF; /* white input background */
+    --color-ring: #16A34A; /* vibrant primary green */
+    
+    /* Card Colors */
+    --color-card: #FFFFFF; /* white */
+    --color-card-foreground: #1F2937; /* dark-gray */
+    --color-popover: #FFFFFF; /* white */
+    --color-popover-foreground: #1F2937; /* dark-gray */
+    
+    /* Muted Colors */
+    --color-muted: #F3F4F6; /* lighter gray for mobile */
+    --color-muted-foreground: #6B7280; /* medium-gray */
+    
+    /* Primary Colors - Vibrant Green */
+    --color-primary: #16A34A; /* vibrant primary green */
+    --color-primary-foreground: #FFFFFF; /* white */
+    
+    /* Secondary Colors - Professional Blue */
+    --color-secondary: #0284C7; /* vibrant secondary blue */
+    --color-secondary-foreground: #FFFFFF; /* white */
+    
+    /* Accent Colors - Warning Orange */
+    --color-accent: #F97316; /* vibrant warning orange */
+    --color-accent-foreground: #FFFFFF; /* white */
+    
+    /* Success Colors - Green (Baik) */
+    --color-success: #16A34A; /* same as primary for consistency */
+    --color-success-foreground: #FFFFFF; /* white */
+    
+    /* Warning Colors - Orange (Sedang) */
+    --color-warning: #F97316; /* vibrant warning orange */
+    --color-warning-foreground: #FFFFFF; /* white */
+    
+    /* Error/Destructive Colors - Red (Tinggi) */
+    --color-error: #DC2626; /* vibrant error red */
+    --color-error-foreground: #FFFFFF; /* white */
+    --color-destructive: #DC2626; /* vibrant error red */
+    --color-destructive-foreground: #FFFFFF; /* white */
+    
+    /* Surface Color */
+    --color-surface: #F8FAFC; /* subtle-gray */
+    
+    /* Text Colors */
+    --color-text-primary: #1F2937; /* dark-gray */
+    --color-text-secondary: #6B7280; /* medium-gray */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  }
+  
+  .font-mono {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+  }
+}
+
+@layer components {
+  /* Agricultural Loading Animation */
+  .loading-plant {
+    animation: grow 2s ease-in-out infinite;
+  }
+  
+  @keyframes grow {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+  
+  /* Haptic Feedback Simulation */
+  .haptic-feedback {
+    animation: pulse 0.2s ease-out;
+  }
+  
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.95); }
+    100% { transform: scale(1); }
+  }
+  
+  /* Smooth Transitions */
+  .transition-smooth {
+    transition: all 300ms ease-out;
+  }
+  
+  /* Agricultural Shadow */
+  .shadow-agricultural {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .shadow-agricultural-lg {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+}
