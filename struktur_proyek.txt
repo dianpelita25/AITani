@@ -1,0 +1,81 @@
+ai_tani_kupang Tallwind
+├── KONTEKS_WEB.txt
+├── README.md
+├── ambil-kode-web.mjs
+├── buat-struktur.mjs
+├── index.html
+├── jsconfig.json
+├── package.json
+├── postcss.config.js
+├── public
+│   ├── assets
+│   │   └── images
+│   ├── manifest.json
+│   └── robots.txt
+├── src
+│   ├── App.jsx
+│   ├── Routes.jsx
+│   ├── components
+│   │   ├── AppIcon.jsx
+│   │   ├── AppImage.jsx
+│   │   ├── ErrorBoundary.jsx
+│   │   ├── ScrollToTop.jsx
+│   │   └── ui
+│   │       ├── BottomNavigation.jsx
+│   │       ├── Button.jsx
+│   │       ├── Checkbox.jsx
+│   │       ├── Input.jsx
+│   │       ├── LoadingOverlay.jsx
+│   │       ├── OfflineStatusBanner.jsx
+│   │       ├── Select.jsx
+│   │       └── ShareActionSheet.jsx
+│   ├── index.jsx
+│   ├── pages
+│   │   ├── NotFound.jsx
+│   │   ├── community-alerts
+│   │   │   ├── components
+│   │   │   │   ├── AlertCard.jsx
+│   │   │   │   ├── AlertDetailModal.jsx
+│   │   │   │   ├── AlertFilters.jsx
+│   │   │   │   └── ReportPestModal.jsx
+│   │   │   └── index.jsx
+│   │   ├── diagnosis-results
+│   │   │   ├── components
+│   │   │   │   ├── ActionButtons.jsx
+│   │   │   │   ├── CropImageDisplay.jsx
+│   │   │   │   ├── DiagnosisCard.jsx
+│   │   │   │   ├── DiagnosisHeader.jsx
+│   │   │   │   ├── EnvironmentalFactors.jsx
+│   │   │   │   ├── OfflineIndicator.jsx
+│   │   │   │   └── RecommendationCard.jsx
+│   │   │   └── index.jsx
+│   │   ├── farming-calendar
+│   │   │   ├── components
+│   │   │   │   ├── AddEventModal.jsx
+│   │   │   │   ├── CalendarGrid.jsx
+│   │   │   │   ├── CalendarHeader.jsx
+│   │   │   │   ├── EventDetailsPanel.jsx
+│   │   │   │   ├── EventFilterBar.jsx
+│   │   │   │   └── MobileCalendarView.jsx
+│   │   │   └── index.jsx
+│   │   ├── home-dashboard
+│   │   │   ├── components
+│   │   │   │   ├── CommunityAlertSnippet.jsx
+│   │   │   │   ├── NavigationCard.jsx
+│   │   │   │   ├── QuickActions.jsx
+│   │   │   │   └── WelcomeHeader.jsx
+│   │   │   └── index.jsx
+│   │   └── photo-diagnosis
+│   │       ├── components
+│   │       │   ├── CameraInterface.jsx
+│   │       │   ├── DiagnosisForm.jsx
+│   │       │   └── DiagnosisResults.jsx
+│   │       └── index.jsx
+│   ├── styles
+│   │   ├── index.css
+│   │   └── tailwind.css
+│   └── utils
+│       └── cn.js
+├── struktur_proyek.txt
+├── tailwind.config.js
+└── vite.config.mjs
