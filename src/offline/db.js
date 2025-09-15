@@ -1,29 +1,37 @@
 // src/offline/db.js
-
 import { openDB } from 'idb';
 
-// Fungsi ini akan membuka (atau membuat jika belum ada) database kita.
-// Ini adalah praktik terbaik untuk memastikan koneksi hanya dibuat sekali.
-async function setupDatabase() {
-  const db = await openDB(
-    'ai-tani-kupang-db', // Nama database Anda
-    1,                  // Versi database. Ubah ini jika Anda mengubah struktur "tabel"
-    {
-    // Fungsi 'upgrade' hanya akan berjalan JIKA database belum ada, 
-    // atau JIKA nomor versi di atas lebih tinggi dari yang sudah ada.
-    upgrade(db) {
-      // Cek apakah "tabel" (disebut objectStore di IndexedDB) sudah ada
-      if (!db.objectStoreNames.contains('request-queue')) {
-        // Jika belum, buat "tabel" baru bernama 'request-queue'.
-        // 'keyPath: 'id'' berarti setiap entri akan punya ID unik.
-        // 'autoIncrement: true' berarti ID akan dibuat secara otomatis.
-        db.createObjectStore('request-queue', { keyPath: 'id', autoIncrement: true });
-      }
-    },
-  });
-  return db;
-}
+const DB_NAME = 'ai-tani-kupang-db';
+const DB_VERSION = 4; // bump untuk memastikan upgrade events store
 
-// Kita panggil fungsi setup dan ekspor hasilnya agar bisa digunakan di file lain.
-// Variabel ini (dbPromise) akan berisi "koneksi" ke database kita.
-export const dbPromise = setupDatabase();
+export const dbPromise = openDB(DB_NAME, DB_VERSION, {
+  upgrade(db, oldVersion, newVersion, transaction) {
+    // 1) Request Queue
+    if (!db.objectStoreNames.contains('request-queue')) {
+      const rq = db.createObjectStore('request-queue', { keyPath: 'id' });
+      rq.createIndex('ns', 'ns', { unique: false });
+    } else {
+      try {
+        const rq = transaction.objectStore('request-queue');
+        const hasIndex = rq.indexNames && rq.indexNames.contains
+          ? rq.indexNames.contains('ns')
+          : Array.from(rq.indexNames || []).includes('ns');
+        if (!hasIndex) rq.createIndex('ns', 'ns', { unique: false });
+      } catch {}
+    }
+
+    // 2) Events LKG store
+    if (!db.objectStoreNames.contains('events')) {
+      const ev = db.createObjectStore('events', { keyPath: 'id' });
+      ev.createIndex('ns', 'ns', { unique: false });
+      ev.createIndex('date', 'date', { unique: false }); // YYYY-MM-DD
+    } else {
+      try {
+        const ev = transaction.objectStore('events');
+        const names = Array.from(ev.indexNames || []);
+        if (!names.includes('ns')) ev.createIndex('ns', 'ns', { unique: false });
+        if (!names.includes('date')) ev.createIndex('date', 'date', { unique: false });
+      } catch {}
+    }
+  },
+});
