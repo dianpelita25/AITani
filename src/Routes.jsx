@@ -8,6 +8,7 @@ import PhotoDiagnosis from './pages/photo-diagnosis';
 import CommunityAlerts from './pages/community-alerts';
 import DiagnosisResults from './pages/diagnosis-results';
 import FarmingCalendar from './pages/farming-calendar';
+import DiagnosisHistory from './pages/diagnosis-history'; // <-- LANGKAH 1: IMPORT HALAMAN BARU
 
 const Routes = () => {
   return (
@@ -22,6 +23,10 @@ const Routes = () => {
         <Route path="/community-alerts" element={<CommunityAlerts />} />
         <Route path="/diagnosis-results" element={<DiagnosisResults />} />
         <Route path="/farming-calendar" element={<FarmingCalendar />} />
+        
+        {/* LANGKAH 2: TAMBAHKAN RUTE BARU DI SINI */}
+        <Route path="/diagnosis-history" element={<DiagnosisHistory />} />
+
         <Route path="*" element={<NotFound />} />
       </RouterRoutes>
       </ErrorBoundary>

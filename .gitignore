@@ -1,8 +1,33 @@
-.DS_Store
-node_modules
-.idea
-package-lock.json
+# Dependencies
+# Abaikan folder node_modules di root dan di dalam folder api
+/node_modules
+/ai-tani-kupang-api/node_modules
+
+# Build output
 /build
+/dist
+
+# Local Environment Variables - SANGAT PENTING!
+# Jangan pernah unggah file .env ke GitHub
+.env
+.env.*
+.env.*.local
+*.env.txt
+
+# Cloudflare Wrangler state and temporary files
+/ai-tani-kupang-api/.wrangler
+/ai-tani-kupang-api/tmp
+
+# Editor and System files
 .vscode/
 .idea/
-vite.config.*s.*
+.DS_Store
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# File snapshot yang digenerate oleh skrip Anda
+KONTEKS_WEB.txt
+struktur_proyek.txt

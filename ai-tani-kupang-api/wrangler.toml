@@ -1,0 +1,26 @@
+name = "ai-tani-kupang-api"
+main = "src/index.js"
+compatibility_date = "2023-11-21"
+
+# D1
+[[d1_databases]]
+binding = "DB"
+database_name = "ai-tani-kupang-web"
+database_id = "59d84d8a-2981-4100-8444-7dfdb14fee06"
+
+# R2 bucket (foto)
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "aitaniweb-photos"
+
+[vars]
+PUBLIC_R2_BASE_URL = "https://pub-2371a43b31a04b178d3f80980585d31e.r2.dev"
+R2_PUBLIC_BUCKET_PATH = "aitaniweb-photos"
+
+R2_LOCAL_BASE = "http://127.0.0.1:8787/r2"
+R2_BUCKET     = "aitaniweb-photos"
+
+# ⬇️ boleh banyak origin, pisahkan dengan koma
+ALLOWED_ORIGIN = "http://localhost:5173,http://localhost:4028"
+MAX_UPLOAD_MB  = "8"
+ENV_NAME       = "development"

@@ -1,207 +1,237 @@
 // src/pages/community-alerts/components/ReportPestModal.jsx
-
-import React, { useState } from 'react';
-import { useCreateAlertMutation } from '../../../services/alertsApi';
-import { enqueueRequest } from '../../../offline/queueService';
+import React, { useEffect, useState } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
+import { useCreateAlertMutation } from '../../../services/alertsApi';
+import { enqueueRequest } from '../../../offline/queueService';
 
-// Props 'onSubmit' tidak lagi diperlukan karena kita akan menangani submit di sini
-const ReportPestModal = ({ isOpen, onClose, className = '' }) => {
-  
-  // 1. PANGGIL HOOK MUTATION DI SINI, BUKAN DI DALAM useState
-  const [createAlert, { isLoading: isSubmitting }] = useCreateAlertMutation();
-  
-  // State untuk form (struktur ini sudah benar)
-  const [formData, setFormData] = useState({
-    pestType: '',
-    severity: 'sedang',
-    affectedCrops: '',
-    description: '',
-    affectedArea: '',
-    pestCount: '',
-    location: '',
-    coordinates: null,
-    photo: null
+// Helper: File -> Data URL (untuk antrean offline)
+const fileToDataURL = (file) =>
+  new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
   });
-  
+
+const PEST_TYPES = [
+  { value: 'wereng', label: 'Wereng' },
+  { value: 'ulat', label: 'Ulat' },
+  { value: 'kutu', label: 'Kutu Daun' },
+  { value: 'trips', label: 'Trips' },
+  { value: 'penggerek', label: 'Penggerek Batang' },
+  { value: 'lainnya', label: 'Lainnya' },
+];
+
+const SEVERITIES = [
+  { value: 'rendah', label: 'Rendah - Sedikit kerusakan' },
+  { value: 'sedang', label: 'Sedang - Kerusakan terlihat' },
+  { value: 'tinggi', label: 'Tinggi - Kerusakan parah' },
+];
+
+const initialForm = {
+  pestType: '',
+  severity: 'sedang',
+  affectedCrops: '',
+  description: '',
+  affectedArea: '',
+  pestCount: '',
+  location: '',
+  coordinates: null,   // { lat, lng }
+  photo: null,
+};
+
+export default function ReportPestModal({ isOpen, onClose, className = '' }) {
+  const [createAlert] = useCreateAlertMutation();
+  const [form, setForm] = useState(initialForm);
   const [photoPreview, setPhotoPreview] = useState(null);
-  const [locationStatus, setLocationStatus] = useState('idle');
+  const [locStatus, setLocStatus] = useState('idle'); // idle|loading|success|error
+  const [submitting, setSubmitting] = useState(false);
 
-  const pestTypes = [
-    { value: 'wereng', label: 'Wereng' },
-    { value: 'ulat', label: 'Ulat' },
-    { value: 'kutu', label: 'Kutu Daun' },
-    { value: 'trips', label: 'Trips' },
-    { value: 'penggerek', label: 'Penggerek Batang' },
-    { value: 'lainnya', label: 'Lainnya' }
-  ];
+  // Ambil GPS otomatis saat modal dibuka
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!navigator.geolocation) return;
+    setLocStatus('loading');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setForm((s) => ({
+          ...s,
+          coordinates: coords,
+          location: `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`
+        }));
+        setLocStatus('success');
+      },
+      () => setLocStatus('error'),
+      { enableHighAccuracy: true, maximumAge: 60000, timeout: 8000 }
+    );
+  }, [isOpen]);
 
-  const severityLevels = [
-    { value: 'rendah', label: 'Rendah - Sedikit kerusakan' },
-    { value: 'sedang', label: 'Sedang - Kerusakan terlihat' },
-    { value: 'tinggi', label: 'Tinggi - Kerusakan parah' }
-  ];
-
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+  const onChange = (field, value) => setForm((s) => ({ ...s, [field]: value }));
 
   const handlePhotoUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFormData(prev => ({ ...prev, photo: file }));
-      const reader = new FileReader();
-      reader.onload = (e) => setPhotoPreview(e.target.result);
-      reader.readAsDataURL(file);
+    const file = e.target.files?.[0] || null;
+    if (!file) {
+      setForm((s) => ({ ...s, photo: null }));
+      setPhotoPreview(null);
+      return;
     }
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    const maxBytes = 5 * 1024 * 1024; // 5MB
+    if (!allowed.includes(file.type)) {
+      alert('Format foto harus JPG, PNG, atau WEBP');
+      return;
+    }
+    if (file.size > maxBytes) {
+      alert('Ukuran foto maksimal 5MB');
+      return;
+    }
+    setForm((s) => ({ ...s, photo: file }));
+    setPhotoPreview(URL.createObjectURL(file));
   };
 
   const getCurrentLocation = () => {
-    setLocationStatus('loading');
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const coords = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          };
-          setFormData(prev => ({
-            ...prev,
-            coordinates: coords,
-            location: `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`
-          }));
-          setLocationStatus('success');
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          setLocationStatus('error');
-        }
-      );
-    } else {
-      setLocationStatus('error');
+    setLocStatus('loading');
+    if (!navigator.geolocation) {
+      setLocStatus('error');
+      return;
     }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setForm((s) => ({
+          ...s,
+          coordinates: coords,
+          location: `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`,
+        }));
+        setLocStatus('success');
+      },
+      () => setLocStatus('error')
+    );
   };
 
-  // 2. GANTI KESELURUHAN FUNGSI handleSubmit DENGAN LOGIKA BARU
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    // Kita akan mengirimkan seluruh formData, jadi tidak perlu membuat objek 'reportData' baru
-    const finalFormData = {
-      ...formData,
+  const buildPayload = async (forQueue = false) => {
+    const payload = {
+      pestType: form.pestType || 'unknown',
+      severity: form.severity || 'sedang',
+      description: form.description || '',
+      affectedCrops: form.affectedCrops || null,
+      affectedArea: form.affectedArea || null,
+      pestCount: form.pestCount || null,
+      location: form.location || null,
+      coordinates: form.coordinates || null,
       timestamp: new Date().toISOString(),
     };
-
-    try {
-      // Coba kirim data langsung ke server Cloudflare
-      await createAlert(finalFormData).unwrap();
-      
-      alert('Laporan berhasil terkirim!');
-      onClose();
-    } catch (err) {
-      // Jika GAGAL (kemungkinan besar karena offline):
-      console.error('Gagal mengirim laporan, menyimpan ke antrean offline:', err);
-      
-      // Simpan data laporan ke IndexedDB
-      await enqueueRequest({
-        type: 'createAlert',
-        payload: finalFormData,
-      });
-
-      alert('Anda sedang offline. Laporan telah disimpan dan akan dikirim secara otomatis saat kembali online.');
-      onClose();
+    if (form.photo) {
+      if (forQueue) {
+        payload.photo = await fileToDataURL(form.photo);
+        payload.photoName = form.photo.name || 'photo.jpg';
+      } else {
+        payload.photo = form.photo; // akan dikirim multipart oleh RTK Query
+      }
     }
+    return payload;
   };
 
+  const resetAndClose = (cb) => {
+    setForm(initialForm);
+    setPhotoPreview(null);
+    setLocStatus('idle');
+    cb && cb();
+    onClose();
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const payload = await buildPayload(false);
+      await createAlert(payload).unwrap();
+      resetAndClose(() => alert('Laporan berhasil terkirim!'));
+    } catch {
+      try {
+        const offlinePayload = await buildPayload(true);
+        await enqueueRequest({ type: 'createAlert', payload: offlinePayload });
+        resetAndClose(() =>
+          alert('Anda sedang offline. Laporan disimpan & akan disinkronkan otomatis saat online.')
+        );
+      } catch {
+        alert('Gagal menyimpan laporan. Coba lagi.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (!isOpen) return null;
 
   return (
     <>
-      <div 
-        className="fixed inset-0 bg-black/50 z-300 transition-smooth"
-        onClick={onClose}
-      />
-      <div className={`
-        fixed inset-0 z-300 overflow-y-auto
-        flex items-center justify-center p-4
-        ${className}
-      `}>
+      {/* Backdrop */}
+      <div className="fixed inset-0 bg-black/50 z-300 transition-smooth" onClick={() => !submitting && onClose()} />
+      <div className={`fixed inset-0 z-300 overflow-y-auto flex items-center justify-center p-4 ${className}`}>
         <div className="bg-card rounded-lg border border-border w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-border">
             <div className="flex items-center space-x-2">
               <Icon name="AlertTriangle" size={24} className="text-warning" />
-              <h2 className="text-xl font-semibold text-foreground">
-                Laporkan Hama
-              </h2>
+              <h2 className="text-xl font-semibold text-foreground">Laporkan Hama</h2>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              iconName="X"
-              onClick={onClose}
-            />
+            <Button variant="ghost" size="icon" iconName="X" onClick={onClose} disabled={submitting} />
           </div>
 
+          {/* Form */}
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* Jenis Hama */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Jenis Hama *
-              </label>
+              <label className="block text-sm font-medium text-foreground mb-2">Jenis Hama *</label>
               <select
-                value={formData.pestType}
-                onChange={(e) => handleInputChange('pestType', e.target.value)}
+                value={form.pestType}
+                onChange={(e) => onChange('pestType', e.target.value)}
                 required
                 className="w-full px-3 py-2 bg-input border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">Pilih jenis hama</option>
-                {pestTypes.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
+                {PEST_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </select>
             </div>
 
+            {/* Tingkat Bahaya */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Tingkat Bahaya *
-              </label>
+              <label className="block text-sm font-medium text-foreground mb-2">Tingkat Bahaya *</label>
               <select
-                value={formData.severity}
-                onChange={(e) => handleInputChange('severity', e.target.value)}
+                value={form.severity}
+                onChange={(e) => onChange('severity', e.target.value)}
                 required
                 className="w-full px-3 py-2 bg-input border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
               >
-                {severityLevels.map((level) => (
-                  <option key={level.value} value={level.value}>
-                    {level.label}
-                  </option>
+                {SEVERITIES.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
                 ))}
               </select>
             </div>
 
+            {/* Tanaman */}
             <Input
               label="Tanaman yang Terserang *"
               type="text"
               placeholder="Contoh: Padi, Jagung, Kacang"
-              value={formData.affectedCrops}
-              onChange={(e) => handleInputChange('affectedCrops', e.target.value)}
+              value={form.affectedCrops}
+              onChange={(e) => onChange('affectedCrops', e.target.value)}
               required
             />
 
+            {/* Deskripsi */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Deskripsi Kerusakan *
-              </label>
+              <label className="block text-sm font-medium text-foreground mb-2">Deskripsi Kerusakan *</label>
               <textarea
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
+                value={form.description}
+                onChange={(e) => onChange('description', e.target.value)}
                 placeholder="Jelaskan kerusakan yang terlihat pada tanaman..."
                 required
                 rows={4}
@@ -209,55 +239,53 @@ const ReportPestModal = ({ isOpen, onClose, className = '' }) => {
               />
             </div>
 
+            {/* Area & jumlah */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
                 label="Luas Area Terserang"
                 type="text"
                 placeholder="Contoh: 0.5 hektar"
-                value={formData.affectedArea}
-                onChange={(e) => handleInputChange('affectedArea', e.target.value)}
+                value={form.affectedArea}
+                onChange={(e) => onChange('affectedArea', e.target.value)}
               />
               <Input
                 label="Perkiraan Jumlah Hama"
                 type="text"
                 placeholder="Contoh: Banyak, Sedikit"
-                value={formData.pestCount}
-                onChange={(e) => handleInputChange('pestCount', e.target.value)}
+                value={form.pestCount}
+                onChange={(e) => onChange('pestCount', e.target.value)}
               />
             </div>
 
+            {/* Lokasi + GPS */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Lokasi
-              </label>
+              <label className="block text-sm font-medium text-foreground mb-2">Lokasi</label>
               <div className="flex space-x-2">
                 <Input
                   type="text"
                   placeholder="Koordinat akan terisi otomatis"
-                  value={formData.location}
-                  onChange={(e) => handleInputChange('location', e.target.value)}
+                  value={form.location}
+                  onChange={(e) => onChange('location', e.target.value)}
                   className="flex-1"
                 />
                 <Button
                   type="button"
                   variant="outline"
-                  iconName={locationStatus === 'loading' ? 'Loader2' : 'MapPin'}
+                  iconName={locStatus === 'loading' ? 'Loader2' : 'MapPin'}
                   onClick={getCurrentLocation}
-                  disabled={locationStatus === 'loading'}
-                  className={locationStatus === 'loading' ? 'animate-spin' : ''}
+                  disabled={locStatus === 'loading'}
+                  className={locStatus === 'loading' ? 'animate-spin' : ''}
                 >
-                  {locationStatus === 'loading' ? 'Mencari...' : 'GPS'}
+                  {locStatus === 'loading' ? 'Mencari...' : 'GPS'}
                 </Button>
               </div>
-              {locationStatus === 'success' && (
-                <p className="text-xs text-success mt-1">Lokasi berhasil didapat</p>
-              )}
+              {locStatus === 'success' && <p className="text-xs text-success mt-1">Lokasi berhasil didapat</p>}
+              {locStatus === 'error' && <p className="text-xs text-destructive mt-1">Gagal mendapatkan lokasi</p>}
             </div>
 
+            {/* Foto */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Foto Kerusakan
-              </label>
+              <label className="block text-sm font-medium text-foreground mb-2">Foto Kerusakan</label>
               <div className="space-y-3">
                 <input
                   type="file"
@@ -267,17 +295,10 @@ const ReportPestModal = ({ isOpen, onClose, className = '' }) => {
                 />
                 {photoPreview && (
                   <div className="relative w-full h-48 bg-muted rounded-md overflow-hidden">
-                    <img
-                      src={photoPreview}
-                      alt="Preview foto hama"
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={photoPreview} alt="Preview foto hama" className="w-full h-full object-cover" />
                     <button
                       type="button"
-                      onClick={() => {
-                        setPhotoPreview(null);
-                        setFormData(prev => ({ ...prev, photo: null }));
-                      }}
+                      onClick={() => { setPhotoPreview(null); setForm((s) => ({ ...s, photo: null })); }}
                       className="absolute top-2 right-2 bg-error text-error-foreground rounded-full p-1 hover:bg-error/90"
                     >
                       <Icon name="X" size={16} />
@@ -287,33 +308,26 @@ const ReportPestModal = ({ isOpen, onClose, className = '' }) => {
               </div>
             </div>
 
+            {/* Tombol aksi */}
             <div className="flex space-x-3 pt-4">
+              <Button type="button" variant="outline" fullWidth onClick={onClose} disabled={submitting}>Batal</Button>
               <Button
-                type="button"
-                variant="outline"
-                fullWidth
-                onClick={onClose}
-                disabled={isSubmitting}
-              >
-                Batal
-              </Button>
-              <Button
-                type="submit"
-                variant="default"
-                fullWidth
-                // 3. GUNAKAN `isSubmitting` DARI RTK QUERY UNTUK MENAMPILKAN LOADING
-                loading={isSubmitting}
-                iconName="Send"
-                iconPosition="left"
-              >
-                {isSubmitting ? 'Mengirim...' : 'Kirim Laporan'}
-              </Button>
+  type="submit"
+  variant="default"
+  fullWidth
+  loading={false}            // <— matikan spinner agar tidak render SVG path error
+  iconName="Send"
+  iconPosition="left"
+  disabled={submitting}
+>
+  {submitting ? 'Mengirim...' : 'Kirim Laporan'}
+</Button>
+
+
             </div>
           </form>
         </div>
       </div>
     </>
   );
-};
-
-export default ReportPestModal;
+}

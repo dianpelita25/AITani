@@ -1,7 +1,7 @@
+//src/pages/home-dashboard/components/NavigationCard.jsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../../../components/AppIcon';
-
 
 const NavigationCard = ({ 
   title, 
@@ -25,10 +25,26 @@ const NavigationCard = ({
         return 'bg-secondary/10 border-secondary/20 hover:bg-secondary/15';
       case 'alerts':
         return 'bg-accent/10 border-accent/20 hover:bg-accent/15';
+      // --- PENAMBAHAN BARU DI SINI ---
+      case 'history':
+        return 'bg-indigo-50 border-indigo-200 hover:bg-indigo-100'; // Menggunakan warna indigo yang netral
+      // --- AKHIR DARI PENAMBAHAN ---
       default:
         return 'bg-card border-border hover:bg-muted/50';
     }
   };
+  
+  const getIconStyles = () => {
+    switch (variant) {
+      case 'camera': return 'bg-primary text-primary-foreground';
+      case 'calendar': return 'bg-secondary text-secondary-foreground';
+      case 'alerts': return 'bg-accent text-accent-foreground';
+      // --- PENAMBAHAN BARU DI SINI ---
+      case 'history': return 'bg-indigo-500 text-white';
+      // --- AKHIR DARI PENAMBAHAN ---
+      default: return 'bg-muted text-foreground';
+    }
+  }
 
   return (
     <div 
@@ -49,13 +65,7 @@ const NavigationCard = ({
       }}
     >
       <div className="flex items-center space-x-4">
-        <div className={`
-          p-3 rounded-xl
-          ${variant === 'camera' ? 'bg-primary text-primary-foreground' : ''}
-          ${variant === 'calendar' ? 'bg-secondary text-secondary-foreground' : ''}
-          ${variant === 'alerts' ? 'bg-accent text-accent-foreground' : ''}
-          ${variant === 'default' ? 'bg-muted text-foreground' : ''}
-        `}>
+        <div className={`p-3 rounded-xl ${getIconStyles()}`}>
           <Icon name={iconName} size={24} strokeWidth={2} />
         </div>
         

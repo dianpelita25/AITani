@@ -1,23 +1,39 @@
-import React from 'react';
+// src/components/AppImage.jsx
+import React, { useEffect, useState } from 'react';
 
-function Image({
+/**
+ * AppImage – sederhana, TANPA fetch/HEAD.
+ * - Render <img> langsung.
+ * - onError → fallback.
+ * - Tidak set crossOrigin (biar tidak kena CORS check).
+ */
+export default function AppImage({
   src,
-  alt = "Image Name",
-  className = "",
-  ...props
+  alt = '',
+  className = '',
+  fallbackSrc = '/assets/images/no_image.png',
+  ...rest
 }) {
+  const [currentSrc, setCurrentSrc] = useState(src || fallbackSrc);
+
+  useEffect(() => {
+    setCurrentSrc(src || fallbackSrc);
+  }, [src, fallbackSrc]);
+
+  const handleError = () => {
+    if (currentSrc !== fallbackSrc) {
+      setCurrentSrc(fallbackSrc);
+    }
+  };
 
   return (
     <img
-      src={src}
+      src={currentSrc || fallbackSrc}
       alt={alt}
       className={className}
-      onError={(e) => {
-        e.target.src = "/assets/images/no_image.png"
-      }}
-      {...props}
+      loading="lazy"
+      onError={handleError}
+      {...rest}
     />
   );
 }
-
-export default Image;
