@@ -4,6 +4,7 @@ import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
+import { getWeatherAdvice } from '../../../services/weatherApi';
 
 const AddEventModal = ({ isOpen, onClose, onAddEvent, selectedDate }) => {
   const [formData, setFormData] = useState({
@@ -15,6 +16,9 @@ const AddEventModal = ({ isOpen, onClose, onAddEvent, selectedDate }) => {
     location: '',
     notes: '',
   });
+  const [advice, setAdvice] = useState(null);
+  const [adviceLoading, setAdviceLoading] = useState(false);
+  const [coords, setCoords] = useState(null);
 
   // Inisialisasi tanggal default dari selectedDate setiap kali modal dibuka
   useEffect(() => {
@@ -23,8 +27,34 @@ const AddEventModal = ({ isOpen, onClose, onAddEvent, selectedDate }) => {
         ? selectedDate.toISOString().split('T')[0]
         : new Date().toISOString().split('T')[0];
       setFormData((p) => ({ ...p, date: defaultDate }));
+      // refresh advice on open
+      setAdvice(null);
+      // get user coords (best-effort)
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => setCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+          () => setCoords(null),
+          { enableHighAccuracy: true, maximumAge: 60000, timeout: 6000 }
+        );
+      }
     }
   }, [isOpen, selectedDate]);
+
+  useEffect(() => {
+    const loadAdvice = async () => {
+      if (!formData?.date || !coords) return;
+      try {
+        setAdviceLoading(true);
+        const data = await getWeatherAdvice({ lat: coords.lat, lon: coords.lon, date: formData.date });
+        setAdvice(data);
+      } catch (e) {
+        setAdvice(null);
+      } finally {
+        setAdviceLoading(false);
+      }
+    };
+    loadAdvice();
+  }, [formData?.date, coords]);
 
   const eventTypes = [
     { value: 'tanam', label: 'Penanaman' },
@@ -138,6 +168,24 @@ const AddEventModal = ({ isOpen, onClose, onAddEvent, selectedDate }) => {
                   required
                 />
                 <Input label="Waktu" type="time" value={formData?.time} onChange={(e) => handleInputChange('time', e?.target?.value)} />
+              </div>
+
+              {/* Weather advice tooltip */}
+              <div className="mt-1 text-xs text-muted-foreground">
+                <div className="inline-flex items-center gap-2 px-2 py-1 rounded border border-border bg-muted/50">
+                  <Icon name="CloudSun" size={14} className="text-secondary" />
+                  {adviceLoading && <span>Memuat saran cuaca...</span>}
+                  {!adviceLoading && advice && (
+                    <span>
+                      Saran cuaca: {advice.summary}. {advice.advice}
+                    </span>
+                  )}
+                  {!adviceLoading && !advice && (
+                    <button type="button" className="underline" onClick={() => setCoords((c) => c ? { ...c } : c)}>
+                      Muat saran cuaca
+                    </button>
+                  )}
+                </div>
               </div>
 
               <Select

@@ -14,12 +14,7 @@
 .env.*.local
 *.env.txt
 
-# Cloudflare Wrangler state and temporary files
-/ai-tani-kupang-api/.wrangler
-/ai-tani-kupang-api/tmp
-
-# Editor and System files
-.vscode/
+# Cloudflare Wrangler state and temporary files ode/
 .idea/
 .DS_Store
 

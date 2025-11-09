@@ -1,0 +1,63 @@
+﻿{
+  "alerts": [
+    {
+      "id": "seed_alert_case_a",
+      "timestamp": "2025-01-03T06:30:00.000Z",
+      "pest_type": "Ulat Grayak",
+      "severity": "high",
+      "description": "Serangan berat pada daun jagung muda dengan bercak cokelat meluas.",
+      "affected_crops": ["Jagung"],
+      "coordinates": { "lat": -10.156, "lng": 123.612 },
+      "location": "Kel. Oesapa, Kupang",
+      "photo_key": "uploads/folder A/Daun Jagung.png",
+      "photo_name": "Daun Jagung.png",
+      "affected_area": "1.5 Ha",
+      "pest_count": 320,
+      "notes": ["Case A", "photoKey"],
+      "reporterLocation": "Kel. Oesapa"
+    },
+    {
+      "id": "seed_alert_case_b",
+      "timestamp": "2025-01-03T04:10:00.000Z",
+      "pest_type": "Wereng Cokelat",
+      "severity": "medium",
+      "description": "Wereng terlihat bergerombol di batang padi. Foto sengaja double-encoded.",
+      "affected_crops": ["Padi"],
+      "coordinates": { "lat": -10.178, "lng": 123.621 },
+      "location": "Taebenu",
+      "photo_url": "https://demo-r2.example.com/uploads/Case%2520B%2520Daun%2520Padi.jpg",
+      "photo_name": "Case B Daun Padi.jpg",
+      "affected_area": "0.8 Ha",
+      "pest_count": 140,
+      "notes": ["Case B", "photoUrl double encode"]
+    },
+    {
+      "id": "seed_alert_case_c",
+      "timestamp": "2025-01-02T21:05:00.000Z",
+      "pest_type": "Kutu Putih",
+      "severity": "low",
+      "description": "Kutu halus pada daun tomat greenhouse. URL mengandung spasi mentah.",
+      "affected_crops": ["Tomat", "Cabai"],
+      "coordinates": { "lat": -10.201, "lng": 123.59 },
+      "location": "Kupang Tengah",
+      "photo_url": "https://demo-r2.example.com/uploads/Case C daun tomat.png",
+      "photo_name": "Case C daun tomat.png",
+      "affected_area": "0.3 Ha",
+      "pest_count": 45,
+      "notes": ["Case C", "photoUrl spasi"]
+    },
+    {
+      "id": "seed_alert_case_d",
+      "timestamp": "2025-01-02T16:40:00.000Z",
+      "pest_type": "Belalang",
+      "severity": "medium",
+      "description": "Lapangan seluas 2 Ha terindikasi belalang dewasa. Belum ada foto yang diunggah.",
+      "affected_crops": ["Sorgum", "Jagung"],
+      "coordinates": { "lat": -10.189, "lng": 123.633 },
+      "location": "Fatukoa",
+      "affected_area": "2 Ha",
+      "pest_count": 80,
+      "notes": ["Case D", "no photo"]
+    }
+  ]
+}

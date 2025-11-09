@@ -6,9 +6,23 @@ html, body {
   padding: 0;
 }
 
+/* Camera scanning animation */
+@keyframes scan {
+  0% { transform: translateY(0%); }
+  100% { transform: translateY(100%); }
+}
+
 #root {
   width: 100%;
   max-width: none; /* ← penting: jangan kunci */
   margin: 0;       /* jangan pakai auto center di sini */
   padding: 0;
+}
+/* src/styles/index.css */
+
+/* ... (kode yang sudah ada) ... */
+
+/* FIX: Paksa peta Leaflet agar selalu di belakang modal dan pop-up lain */
+.leaflet-container {
+  z-index: 1 !important;
 }

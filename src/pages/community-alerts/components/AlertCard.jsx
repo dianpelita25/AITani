@@ -2,6 +2,7 @@
 import React from 'react';
 import Icon from '../../../components/AppIcon';
 import AppImage from '../../../components/AppImage';
+import normalizePhotoUrl from '../../../utils/normalizePhotoUrl'; // ← tambah ini
 
 const AlertCard = ({ alert, onViewDetails, className = '' }) => {
   const pestType = alert?.pestType || alert?.pest_type || 'Hama';
@@ -53,10 +54,8 @@ const AlertCard = ({ alert, onViewDetails, className = '' }) => {
             ? alert.affected_crops.join(', ')
             : 'Tanaman tidak spesifik';
 
-  // ==== Sumber gambar: prioritaskan photoKey → /api/photos/<key>, jika tidak ada pakai photoUrl ====
-  const imgSrc = alert?.photoKey
-    ? `/api/photos/${encodeURIComponent(alert.photoKey)}`
-    : (alert?.photoUrl || alert?.photo_url || null);
+  // ==== Ganti jadi satu pintu normalisasi (hindari double-encode/spasi raw) ====
+  const imgSrc = normalizePhotoUrl(alert?.photoKey, (alert?.photoUrl || alert?.photo_url || null));
 
   return (
     <div

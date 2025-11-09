@@ -13,6 +13,7 @@ import AlertCard from './components/AlertCard';
 import AlertFilters from './components/AlertFilters';
 import ReportPestModal from './components/ReportPestModal';
 import AlertDetailModal from './components/AlertDetailModal';
+import CommunityMap from './components/CommunityMap';
 
 // util jarak (km)
 function haversineKm(a, b) {
@@ -254,6 +255,17 @@ export default function CommunityAlerts() {
 
             {/* Konten utama */}
             <section className="order-1 md:order-1 md:col-span-8">
+              {/* Map on top of list */}
+              <div className="bg-card border border-border rounded-xl p-3 mb-4">
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <h3 className="text-base font-semibold text-foreground">Peta Laporan Komunitas</h3>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Icon name="Map" size={14} />
+                    <span>Overlay sederhana</span>
+                  </div>
+                </div>
+                <CommunityMap alerts={filteredAlerts} userPos={userPos} />
+              </div>
               {/* Search + chips */}
               <div className="bg-card border border-border rounded-xl p-4 mb-4">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">

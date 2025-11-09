@@ -171,8 +171,12 @@ export default function ReportPestModal({ isOpen, onClose, className = '' }) {
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 z-300 transition-smooth" onClick={() => !submitting && onClose()} />
-      <div className={`fixed inset-0 z-300 overflow-y-auto flex items-center justify-center p-4 ${className}`}>
+      // Ganti menjadi seperti ini:
+
+{/* Backdrop */}
+<div className="fixed inset-0 bg-black/50 z-[299] transition-smooth" onClick={() => !submitting && onClose()} />
+{/* Modal Wrapper */}
+<div className={`fixed inset-0 z-[300] overflow-y-auto flex items-center justify-center p-4 ${className}`}>
         <div className="bg-card rounded-lg border border-border w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-border">

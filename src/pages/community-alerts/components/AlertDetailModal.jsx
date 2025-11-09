@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import AppImage from '../../../components/AppImage';
+import normalizePhotoUrl from '../../../utils/normalizePhotoUrl'; // ← tambah ini
 
 function getSeverityConfig(sevRaw) {
   const sev = (sevRaw || '').toLowerCase();
@@ -65,10 +66,8 @@ export default function AlertDetailModal({ isOpen, onClose, alert, className = '
 
   const coords = ensureCoords(alert?.coordinates);
 
-  // ==== Sumber gambar: prioritaskan photoKey → /api/photos/<key>, jika tidak ada pakai photoUrl ====
-  const imgSrc = alert?.photoKey
-    ? `/api/photos/${encodeURIComponent(alert.photoKey)}`
-    : (alert?.photoUrl ?? alert?.photo_url ?? null);
+  // ==== Ganti jadi satu pintu normalisasi (hindari double-encode/spasi raw) ====
+  const imgSrc = normalizePhotoUrl(alert?.photoKey, (alert?.photoUrl ?? alert?.photo_url ?? null));
 
   const mapEmbedUrl = (() => {
     if (!coords) return null;

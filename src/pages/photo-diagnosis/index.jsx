@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCreateDiagnosisMutation } from '../../services/diagnosisApi';
+import { runLocalDiagnosis } from '../../ai/localDiagnosis';
 import { enqueueRequest } from '../../offline/queueService';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
@@ -55,13 +56,20 @@ const PhotoDiagnosis = () => {
     setFormData(data);
     const submissionData = { ...data, photo: capturedImage };
 
+    // 1) Run on-device diagnosis first for instant UX
+    try {
+      const local = await runLocalDiagnosis(capturedImage);
+      setDiagnosisResult(local);
+      setCurrentStep('results');
+    } catch (e) {
+      console.warn('Local diagnosis failed, will rely on server:', e?.message || e);
+    }
+
+    // 2) Persist to server (best-effort). Update UI if it returns richer data.
     try {
       const result = await createDiagnosis(submissionData).unwrap();
-      if (result.success) {
-        setDiagnosisResult(result);
-        setCurrentStep('results');
-      } else {
-        throw new Error(result.message || 'Diagnosis gagal dari server');
+      if (result?.success) {
+        setDiagnosisResult((prev) => prev || result);
       }
     } catch (error) {
       console.error('Gagal mengirim diagnosis, menyimpan ke antrean:', error);
@@ -78,8 +86,6 @@ const PhotoDiagnosis = () => {
       }
 
       await enqueueRequest({ type: 'createDiagnosis', payload: offlinePayload });
-      alert('Anda sedang offline. Diagnosis akan diproses dan hasilnya akan muncul di riwayat saat kembali online.');
-      navigate('/home-dashboard');
     }
   };
 
