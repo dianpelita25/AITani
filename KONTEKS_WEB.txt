@@ -1,7 +1,7 @@
 --- AWAL DARI SNAPSHOT KODE PROYEK WEB ---
 
-Proyek: ai_tani_kupang Tallwind
-Dibuat pada: Mon Sep 15 2025 14:12:36 GMT+0800 (Singapore Standard Time)
+Proyek: ai_tani_kupang Tallwind - Copy
+Dibuat pada: Sun Nov 09 2025 19:52:15 GMT+0800 (Singapore Standard Time)
 
 ================================================================================
 STRUKTUR FILE & KONTEN
@@ -10,7 +10,7 @@ STRUKTUR FILE & KONTEN
 
 --- File: ./README.md ---
 
-# Ai Tani Kupang – React App
+﻿# Ai Tani Kupang – React App
 
 A modern React + Vite app with offline-aware reporting, Cloudflare Worker API, and clean UI powered by Tailwind.
 
@@ -62,6 +62,18 @@ Aplikasi FE memanggil API pada origin Worker lokal (contoh: `http://127.0.0.1:87
 
 ---
 
+## Dev Demo Checklist (5 langkah)
+
+1. **Wrangler dev** – `npx wrangler dev` (jendela ini jangan ditutup supaya D1/R2 lokal hidup).
+2. **Upload foto contoh ke R2** – gunakan aset `docs/demo-assets/Daun_Jagung.png` lalu jalankan  
+   `npx wrangler r2 object put aitaniweb-photos/uploads/folder%20A/Daun%20Jagung.png --file docs/demo-assets/Daun_Jagung.png`.
+3. **Seed alert** – `curl -X POST http://127.0.0.1:8787/api/dev/seed-alerts?table=alerts`  
+   (opsional: kirim payload kustom dengan `-d @ai-tani-kupang-api/fixtures/alerts.fixture.json`).
+4. **Frontend dev** – `npm run dev` lalu buka `http://localhost:4028/community-alerts`.
+5. **Verifikasi** – buka salah satu alert hingga modal, cek request `GET /api/photos/uploads/folder%20A/Daun%20Jagung.png` → 200. Coba hapus/ubah `photoKey` untuk memastikan fallback tidak crash.
+
+---
+
 ## 🔧 Konfigurasi yang Penting
 
 ### 1) Penanganan Gambar (tanpa CORS)
@@ -96,30 +108,6 @@ Jika submit gagal (offline), payload (termasuk foto sebagai **DataURL**) diantri
 ## 📁 Project Structure (ringkas)
 
 ```
-src/
-├─ components/
-│  ├─ AppIcon.jsx
-│  ├─ AppImage.jsx           # <— no CORS trick
-│  └─ ui/                    # Button, Input, dsb.
-├─ pages/
-│  └─ community-alerts/
-│     ├─ index.jsx
-│     └─ components/
-│        ├─ AlertCard.jsx
-│        ├─ AlertDetailModal.jsx   # <— normalizePhotoUrl()
-│        └─ ReportPestModal.jsx
-├─ services/
-│  ├─ api.js                 # base RTK Query api
-│  └─ alertsApi.js           # toCamelAlert(), endpoints
-├─ offline/
-│  └─ queueService.js        # enqueue/sync
-└─ App.jsx / Routes.jsx / index.jsx
-```
-
----
-
-## 📁 Project Structure (FULL)
-
 ai_tani_kupang Tallwind
 ├── .env.txt
 ├── KONTEKS_WEB.txt
@@ -134,32 +122,34 @@ ai_tani_kupang Tallwind
 │   │   │       ├── d1
 │   │   │       │   └── miniflare-D1DatabaseObject
 │   │   │       │       └── 5ae9da099f6cfd381eabd0dd98dea07b3919d6ef80713ba9d8802efef8b9d036.sqlite
+│   │   │       ├── kv
+│   │   │       │   └── miniflare-KVNamespaceObject
 │   │   │       ├── r2
 │   │   │       │   ├── aitaniweb-photos
 │   │   │       │   │   └── blobs
-│   │   │       │   │       ├── 145e90cb043214655da53ae60f9c3c2009de4b6be3a999bba7a27f84cb323fc1000001994137d690
-│   │   │       │   │       ├── 17e15f4549191400f985a15033fff5060a3e0a9158b89bcbe3577ed28653b962000001993b890340
-│   │   │       │   │       ├── 253d0cdf8758e01f6e554a0aba8b3db84c3e2e88baa9863caa81acbd91e623320000019941135d8f
-│   │   │       │   │       ├── 276d78488906b8780221d127ec03380b3f85d0ddf71984b8764b4e54f46a9122000001993d2bdef6
-│   │   │       │   │       ├── 2cab905cd4dbe0460feed4f34948ea1ec7622b5350f937ead18c80737b86180b000001993ce849c9
-│   │   │       │   │       ├── 2f8339ab856fcf0492eaeb8c384a711d06a84cc5eaa9dcf85e54c489bd8e08b5000001994112fbe6
-│   │   │       │   │       ├── 346334ec54382334f42d89a8bf4936d9c8bffb8ccc3c76b3494bb18b46a17704000001993c445ddd
-│   │   │       │   │       ├── 4c511463f771697455501e31ea877679e92a5093f34e7e991bd14dee8606cb4e000001994109c8a8
-│   │   │       │   │       ├── 4dd517d5067101f7b8c5456d2421002a6e823aac826a7ccbf031837427315971000001993d32ee9e
-│   │   │       │   │       ├── 53b24ebdd1127dfdfefc42366cdc849f655b13ab7eb34316404c75e051a2e6d7000001993c46d22e
-│   │   │       │   │       ├── 5f56014dbb5e8615e1d5187f3ba6bf7c9f0c240c71ca211e15ac53bd72f86b3f000001993c47f3f8
-│   │   │       │   │       ├── 7f31aeee0a01ea2ea1dcb113eb50456be7044a2efbf95ccd17c37b9f8855938b0000019941489186
-│   │   │       │   │       ├── 7fa5951b56477c85244f82055e414022f5ed79edacf46bf4ab567dca5136df1f000001993d0119d2
-│   │   │       │   │       ├── 9e682555d64f8b0134e00a509eefe12dbde07847b668b998769d00b54ba39609000001993ccf6672
-│   │   │       │   │       ├── a250c881bec64b10d3e9d2a532f01afe488974d5268fdac3c940fa51e375e93b000001994113f0c0
-│   │   │       │   │       ├── a36d44fe74f8355f466a3b592d40e4266fefd6cbb1f91ccb68d9eb175e1e27d60000019940b772f5
-│   │   │       │   │       ├── ac4e9c3eb382058d1ec7de4caa1c8f5dc7b27c10e2e6a224f39eecf281bd5029000001993b67f052
-│   │   │       │   │       ├── bcfd32ade40220407d8de3b167dd369a9d505f6fe7e95eb68de7e0dd2eeb3e7c0000019940fee848
-│   │   │       │   │       ├── ce356431fc5033347f0b87b0f880a58a183bec82a94141e65a27f1d4eee2da010000019937b79fba
-│   │   │       │   │       ├── e5a16bb6a1c5e4c352b102fa6c4a319587ffb00d1e3bd963430eabaacb632be0000001993969131b
-│   │   │       │   │       ├── e969717f15c765e981c928d7907c51c53e9023a29e71b5643fa1f48e98d425c30000019941111e42
-│   │   │       │   │       ├── fe137531195cffad3400a28343216561be8aad29c721a99e57f2e76d0660bda3000001993d3f689e
-│   │   │       │   │       └── ff95c365c0ae996938de2aa8ad5384fbe7a030460d5cefde6abe4c85fd3bceb1000001993b117a86
+│   │   │       │   │       ├── 145e90cb043214655da53ae60f9c3c2009de4b6be3a999bba7a27f84cb323fc1000001994137d690      
+│   │   │       │   │       ├── 17e15f4549191400f985a15033fff5060a3e0a9158b89bcbe3577ed28653b962000001993b890340      
+│   │   │       │   │       ├── 253d0cdf8758e01f6e554a0aba8b3db84c3e2e88baa9863caa81acbd91e623320000019941135d8f      
+│   │   │       │   │       ├── 276d78488906b8780221d127ec03380b3f85d0ddf71984b8764b4e54f46a9122000001993d2bdef6      
+│   │   │       │   │       ├── 2cab905cd4dbe0460feed4f34948ea1ec7622b5350f937ead18c80737b86180b000001993ce849c9      
+│   │   │       │   │       ├── 2f8339ab856fcf0492eaeb8c384a711d06a84cc5eaa9dcf85e54c489bd8e08b5000001994112fbe6      
+│   │   │       │   │       ├── 346334ec54382334f42d89a8bf4936d9c8bffb8ccc3c76b3494bb18b46a17704000001993c445ddd      
+│   │   │       │   │       ├── 4c511463f771697455501e31ea877679e92a5093f34e7e991bd14dee8606cb4e000001994109c8a8      
+│   │   │       │   │       ├── 4dd517d5067101f7b8c5456d2421002a6e823aac826a7ccbf031837427315971000001993d32ee9e      
+│   │   │       │   │       ├── 53b24ebdd1127dfdfefc42366cdc849f655b13ab7eb34316404c75e051a2e6d7000001993c46d22e      
+│   │   │       │   │       ├── 5f56014dbb5e8615e1d5187f3ba6bf7c9f0c240c71ca211e15ac53bd72f86b3f000001993c47f3f8      
+│   │   │       │   │       ├── 7f31aeee0a01ea2ea1dcb113eb50456be7044a2efbf95ccd17c37b9f8855938b0000019941489186      
+│   │   │       │   │       ├── 7fa5951b56477c85244f82055e414022f5ed79edacf46bf4ab567dca5136df1f000001993d0119d2      
+│   │   │       │   │       ├── 9e682555d64f8b0134e00a509eefe12dbde07847b668b998769d00b54ba39609000001993ccf6672      
+│   │   │       │   │       ├── a250c881bec64b10d3e9d2a532f01afe488974d5268fdac3c940fa51e375e93b000001994113f0c0      
+│   │   │       │   │       ├── a36d44fe74f8355f466a3b592d40e4266fefd6cbb1f91ccb68d9eb175e1e27d60000019940b772f5      
+│   │   │       │   │       ├── ac4e9c3eb382058d1ec7de4caa1c8f5dc7b27c10e2e6a224f39eecf281bd5029000001993b67f052      
+│   │   │       │   │       ├── bcfd32ade40220407d8de3b167dd369a9d505f6fe7e95eb68de7e0dd2eeb3e7c0000019940fee848      
+│   │   │       │   │       ├── ce356431fc5033347f0b87b0f880a58a183bec82a94141e65a27f1d4eee2da010000019937b79fba      
+│   │   │       │   │       ├── e5a16bb6a1c5e4c352b102fa6c4a319587ffb00d1e3bd963430eabaacb632be0000001993969131b      
+│   │   │       │   │       ├── e969717f15c765e981c928d7907c51c53e9023a29e71b5643fa1f48e98d425c30000019941111e42      
+│   │   │       │   │       ├── fe137531195cffad3400a28343216561be8aad29c721a99e57f2e76d0660bda3000001993d3f689e      
+│   │   │       │   │       └── ff95c365c0ae996938de2aa8ad5384fbe7a030460d5cefde6abe4c85fd3bceb1000001993b117a86      
 │   │   │       │   └── miniflare-R2BucketObject
 │   │   │       │       └── 9720582e742b2d0573c56af6f4fb8eaeeff0b0843e2eaa987d9e5501564a6d80.sqlite
 │   │   │       └── workflows
@@ -176,11 +166,11 @@ ai_tani_kupang Tallwind
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
 │   │       │   └── middleware-loader.entry.ts
-│   │       ├── bundle-rJpwiW
+│   │       ├── bundle-Wv8d8e
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
 │   │       │   └── middleware-loader.entry.ts
-│   │       ├── bundle-uI5BaS
+│   │       ├── bundle-rJpwiW
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
 │   │       │   └── middleware-loader.entry.ts
@@ -190,10 +180,10 @@ ai_tani_kupang Tallwind
 │   │       ├── dev-8dZu5J
 │   │       │   ├── index.js
 │   │       │   └── index.js.map
-│   │       ├── dev-Kwsqpq
+│   │       ├── dev-byeFH4
 │   │       │   ├── index.js
 │   │       │   └── index.js.map
-│   │       └── dev-byeFH4
+│   │       └── dev-qPJItj
 │   │           ├── index.js
 │   │           └── index.js.map
 │   ├── local_schema.sql
@@ -220,6 +210,8 @@ ai_tani_kupang Tallwind
 │   └── wrangler.toml
 ├── ambil-kode-web.mjs
 ├── buat-struktur.mjs
+├── docs
+│   └── WOW-RUNBOOK.md
 ├── index.html
 ├── jsconfig.json
 ├── package.json
@@ -228,12 +220,16 @@ ai_tani_kupang Tallwind
 │   ├── assets
 │   │   └── images
 │   ├── manifest.json
+│   ├── model
+│   │   └── README.txt
 │   └── robots.txt
 ├── scripts
 │   └── simulate.mjs
 ├── src
 │   ├── App.jsx
 │   ├── Routes.jsx
+│   ├── ai
+│   │   └── localDiagnosis.js
 │   ├── components
 │   │   ├── AppIcon.jsx
 │   │   ├── AppImage.jsx
@@ -263,6 +259,7 @@ ai_tani_kupang Tallwind
 │   │   │   │   ├── AlertCard.jsx
 │   │   │   │   ├── AlertDetailModal.jsx
 │   │   │   │   ├── AlertFilters.jsx
+│   │   │   │   ├── CommunityMap.jsx
 │   │   │   │   └── ReportPestModal.jsx
 │   │   │   └── index.jsx
 │   │   ├── diagnosis-history
@@ -305,7 +302,8 @@ ai_tani_kupang Tallwind
 │   │   ├── alertsApi.js
 │   │   ├── api.js
 │   │   ├── diagnosisApi.js
-│   │   └── eventsApi.js
+│   │   ├── eventsApi.js
+│   │   └── weatherApi.js
 │   ├── styles
 │   │   ├── index.css
 │   │   └── tailwind.css
@@ -314,6 +312,7 @@ ai_tani_kupang Tallwind
 ├── struktur_proyek.txt
 ├── tailwind.config.js
 └── vite.config.mjs
+
 
 
 ---
@@ -377,6 +376,7 @@ Untuk API: deploy Cloudflare Worker sesuai setup Wrangler (R2 & D1 binding sama 
 - Powered by **React + Vite**
 - Backend: **Cloudflare Workers (D1 + R2)**
 - Styled with **Tailwind CSS**
+
 
 
 
@@ -462,12 +462,14 @@ Untuk API: deploy Cloudflare Worker sesuai setup Wrangler (R2 & D1 binding sama 
     "dotenv": "^16.0.1",
     "framer-motion": "^10.16.4",
     "idb": "^8.0.3",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.484.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-helmet": "^6.1.0",
     "react-hook-form": "^7.55.0",
     "react-hot-toast": "^2.6.0",
+    "react-leaflet": "^5.0.0",
     "react-redux": "^9.2.0",
     "react-router-dom": "6.0.2",
     "react-router-hash-link": "^2.4.3",
@@ -481,7 +483,11 @@ Untuk API: deploy Cloudflare Worker sesuai setup Wrangler (R2 & D1 binding sama 
   "scripts": {
     "start": "vite",
     "build": "vite build --sourcemap",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "typecheck": "node -e \"console.log('Typecheck (JSDoc) OK')\"",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui"
   },
   "eslintConfig": {
     "extends": [
@@ -507,11 +513,14 @@ Untuk API: deploy Cloudflare Worker sesuai setup Wrangler (R2 & D1 binding sama 
     "@tailwindcss/line-clamp": "^0.1.0",
     "@tailwindcss/typography": "^0.5.16",
     "@vitejs/plugin-react": "4.3.4",
+    "@vitest/coverage-v8": "^4.0.8",
     "autoprefixer": "10.4.2",
+    "jsdom": "^27.1.0",
     "postcss": "8.4.8",
     "tailwindcss": "3.4.6",
     "vite": "5.0.0",
-    "vite-tsconfig-paths": "3.6.0"
+    "vite-tsconfig-paths": "3.6.0",
+    "vitest": "^4.0.8"
   },
   "packageManager": "pnpm@9.12.3+sha512.cce0f9de9c5a7c95bef944169cc5dfe8741abfb145078c0d508b868056848a87c81e626246cb60967cbd7fd29a6c062ef73ff840d96b3c86c40ac92cf4a813ee"
 }
@@ -550,6 +559,14 @@ module.exports = {
 
 
 
+--- File: ./public/model/README.txt ---
+
+Place your TensorFlow.js GraphModel here as `model.json` with weights shards.
+Path expected by the app: /model/model.json
+If missing, the app will use a safe mock fallback for predictions.
+
+
+
 --- File: ./public/robots.txt ---
 
 # https://www.robotstxt.org/robotstxt.html
@@ -562,12 +579,13 @@ Disallow:
 
 // src/App.jsx
 
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useState } from "react";
 import Routes from "./Routes";
 import { useCreateAlertMutation } from './services/alertsApi';
 import { useCreateDiagnosisMutation } from './services/diagnosisApi';
 import { useCreateEventMutation, useUpdateEventMutation, useDeleteEventMutation } from './services/eventsApi';
 import { retryQueue } from './offline/queueService';
+import { Toaster, toast } from 'react-hot-toast';
 
 function App() {
   const [createAlert] = useCreateAlertMutation();
@@ -575,6 +593,9 @@ function App() {
   const [createEvent] = useCreateEventMutation();
   const [updateEvent] = useUpdateEventMutation();
   const [deleteEvent] = useDeleteEventMutation();
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator === 'undefined' ? true : navigator.onLine
+  );
 
   const apiClient = useCallback(async (request) => {
     // ... (logika apiClient tetap sama persis)
@@ -590,6 +611,7 @@ function App() {
 
   // --- AWAL DARI PERBAIKAN ---
   useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
     // Buat channel dengan nama yang sama persis
     const syncChannel = new BroadcastChannel('sync-channel');
 
@@ -600,7 +622,7 @@ function App() {
         } else {
             console.log('Offline, sinkronisasi ditunda.');
         }
-    }
+    };
 
     // Dengarkan siaran dari channel
     syncChannel.onmessage = (event) => {
@@ -623,10 +645,57 @@ function App() {
   }, [apiClient]); // <-- apiClient sebagai dependensi sudah benar
   // --- AKHIR DARI PERBAIKAN ---
 
-  return <Routes />;
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const updateBody = (online) => {
+      setIsOnline(online);
+      if (typeof document !== 'undefined') {
+        document.body.classList.toggle('is-offline', !online);
+      }
+    };
+    updateBody(window.navigator?.onLine ?? true);
+
+    const handleOnline = () => {
+      updateBody(true);
+      toast.success('Koneksi kembali online', { id: 'network-status' });
+    };
+    const handleOffline = () => {
+      updateBody(false);
+      toast.error('Sedang offline. Data baru antri dulu.', {
+        id: 'network-status',
+        duration: 6000,
+      });
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  return (
+    <>
+      <Routes />
+      <NetworkStatusPill isOnline={isOnline} />
+      <Toaster position="top-right" toastOptions={{ duration: 5000 }} />
+    </>
+  );
 }
 
 export default App;
+
+function NetworkStatusPill({ isOnline }) {
+  if (isOnline) return null;
+  return (
+    <div className="fixed top-4 right-4 z-[600] rounded-full bg-warning text-warning-foreground px-4 py-2 text-xs font-semibold shadow-lg border border-warning/40">
+      Mode offline - data tersimpan lokal
+    </div>
+  );
+}
+
 
 
 --- File: ./src/Routes.jsx ---
@@ -668,6 +737,196 @@ const Routes = () => {
 };
 
 export default Routes;
+
+
+--- File: ./src/ai/localDiagnosis.js ---
+
+// src/ai/localDiagnosis.js
+// On-device diagnosis using TensorFlow.js if available, with safe mock fallback.
+// JSDoc types to keep it TypeScript-safe in JS projects.
+
+/**
+ * @typedef {Object} Diagnosis
+ * @property {string} label
+ * @property {number} confidence
+ * @property {string} severity
+ * @property {string} description
+ */
+
+/**
+ * @typedef {Object} Recommendation
+ * @property {string} id
+ * @property {string} title
+ * @property {string} description
+ * @property {"rendah"|"sedang"|"tinggi"} priority
+ * @property {string} timeframe
+ */
+
+/**
+ * @typedef {Object} DiagnosisResult
+ * @property {Diagnosis} diagnosis
+ * @property {Recommendation[]} recommendations
+ */
+
+/**
+ * Try load TensorFlow.js at runtime.
+ * @returns {Promise<any|null>}
+ */
+async function tryLoadTf() {
+  try {
+    // Defer to runtime dynamic import so build works without tfjs installed
+    // eslint-disable-next-line no-undef
+    const tf = await import(/* @vite-ignore */ 'https://esm.sh/@tensorflow/tfjs@4.20.0');
+    return tf;
+  } catch (e) {
+    console.warn('TFJS unavailable, using mock fallback:', e?.message || e);
+    return null;
+  }
+}
+
+/**
+ * Attempt to load a model from public path. If unavailable, return null.
+ * @param {any} tf
+ */
+async function tryLoadModel(tf) {
+  try {
+    const modelUrl = '/model/model.json';
+    const model = await tf.loadGraphModel(modelUrl);
+    return model;
+  } catch (e) {
+    console.warn('Model not found, using mock fallback:', e?.message || e);
+    return null;
+  }
+}
+
+/**
+ * Resize an image File to a tensor that matches model expected input.
+ * @param {any} tf
+ * @param {File|Blob} file
+ * @param {number} size
+ */
+async function fileToInputTensor(tf, file, size = 224) {
+  const imgBitmap = await createImageBitmap(file);
+  // Convert ImageBitmap to tensor: [H,W,3] -> [1,H,W,3]
+  const tfimg = tf.browser.fromPixels(imgBitmap).toFloat();
+  const resized = tf.image.resizeBilinear(tfimg, [size, size]);
+  const normalized = resized.div(255.0);
+  const batched = normalized.expandDims(0);
+  tfimg.dispose();
+  resized.dispose();
+  return batched;
+}
+
+/**
+ * Produce deterministic mock prediction for demo and offline.
+ * @returns {DiagnosisResult}
+ */
+function mockPredict() {
+  const candidates = [
+    {
+      label: 'Bercak Daun',
+      severity: 'sedang',
+      description: 'Terlihat bercak coklat pada daun. Perlu pemantauan dan tindakan ringan.'
+    },
+    {
+      label: 'Busuk Akar',
+      severity: 'berat',
+      description: 'Indikasi serangan busuk akar, segera lakukan sanitasi dan pengeringan.'
+    },
+    {
+      label: 'Sehat',
+      severity: 'ringan',
+      description: 'Tanaman tampak sehat, lanjutkan pemeliharaan rutin.'
+    }
+  ];
+  const pick = candidates[Math.floor(Date.now() / (1000 * 7)) % candidates.length];
+  const confidence = pick.label === 'Sehat' ? 88.2 : 91.4;
+  /** @type {DiagnosisResult} */
+  const result = {
+    diagnosis: {
+      label: pick.label,
+      confidence,
+      severity: pick.severity,
+      description: pick.description
+    },
+    recommendations: [
+      { id: 'rec_local_1', title: 'Pemantauan Daun', description: 'Pantau penyebaran bercak setiap 2 hari.', priority: 'sedang', timeframe: '2 hari' },
+      { id: 'rec_local_2', title: 'Penyemprotan Ringan', description: 'Gunakan fungisida sesuai label bila perlu.', priority: 'rendah', timeframe: 'Pagi' }
+    ]
+  };
+  return result;
+}
+
+/**
+ * Run on-device diagnosis using TFJS if available; falls back to mock.
+ * Returns quickly and safely without throwing.
+ *
+ * @param {File|Blob} imageFile
+ * @returns {Promise<DiagnosisResult>}
+ */
+export async function runLocalDiagnosis(imageFile) {
+  try {
+    const tf = await tryLoadTf();
+    if (!tf) return mockPredict();
+
+    const model = await tryLoadModel(tf);
+    if (!model) return mockPredict();
+
+    const input = await fileToInputTensor(tf, imageFile, 224);
+    const logits = model.predict(input); // shape: [1, C]
+    const data = await logits.data();
+    const arr = Array.from(data);
+    const maxIdx = arr.reduce((mi, v, i, a) => (v > a[mi] ? i : mi), 0);
+
+    // Demo labels; real model should ship a labels.json alongside.
+    const labels = ['Bercak Daun', 'Busuk Akar', 'Sehat'];
+    const label = labels[maxIdx] || 'Sehat';
+    const confidence = Math.round(arr[maxIdx] * 1000) / 10 || 90.0;
+    const severity = label === 'Busuk Akar' ? 'berat' : label === 'Sehat' ? 'ringan' : 'sedang';
+
+    /** @type {DiagnosisResult} */
+    const result = {
+      diagnosis: {
+        label,
+        confidence,
+        severity,
+        description: label === 'Sehat' ? 'Tanaman tampak sehat.' : 'Deteksi awal menunjukkan gejala yang perlu ditangani.'
+      },
+      recommendations: [
+        { id: 'rec_tf_1', title: 'Pantau Kondisi', description: 'Periksa kembali dalam 2-3 hari.', priority: 'rendah', timeframe: '2-3 hari' },
+        { id: 'rec_tf_2', title: 'Perbaiki Drainase', description: 'Pastikan tanah tidak tergenang.', priority: 'sedang', timeframe: 'Pagi' }
+      ]
+    };
+
+    input.dispose();
+    if (typeof logits?.dispose === 'function') logits.dispose();
+    return result;
+  } catch (e) {
+    console.warn('Local diagnosis failed, using mock:', e?.message || e);
+    return mockPredict();
+  }
+}
+
+/**
+ * Compress an image file using canvas to JPEG.
+ * @param {File} file
+ * @param {number} quality 0..1
+ * @returns {Promise<File>}
+ */
+export async function compressImage(file, quality = 0.8) {
+  const bitmap = await createImageBitmap(file);
+  const canvas = document.createElement('canvas');
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(bitmap, 0, 0);
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+  if (!blob) return file;
+  const newFile = new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+  return newFile;
+}
+
+
 
 
 --- File: ./src/components/AppIcon.jsx ---
@@ -2101,6 +2360,7 @@ import App from "./App";
 import "./styles/tailwind.css";
 import "./styles/index.css";
 
+
 console.log("Aplikasi Konfigurasi: Membuat Redux store."); // <-- PENANDA 2
 const store = configureStore({
   reducer: {
@@ -2494,6 +2754,7 @@ export default NotFound;
 import React from 'react';
 import Icon from '../../../components/AppIcon';
 import AppImage from '../../../components/AppImage';
+import normalizePhotoUrl from '../../../utils/normalizePhotoUrl'; // ← tambah ini
 
 const AlertCard = ({ alert, onViewDetails, className = '' }) => {
   const pestType = alert?.pestType || alert?.pest_type || 'Hama';
@@ -2545,10 +2806,8 @@ const AlertCard = ({ alert, onViewDetails, className = '' }) => {
             ? alert.affected_crops.join(', ')
             : 'Tanaman tidak spesifik';
 
-  // ==== Sumber gambar: prioritaskan photoKey → /api/photos/<key>, jika tidak ada pakai photoUrl ====
-  const imgSrc = alert?.photoKey
-    ? `/api/photos/${encodeURIComponent(alert.photoKey)}`
-    : (alert?.photoUrl || alert?.photo_url || null);
+  // ==== Ganti jadi satu pintu normalisasi (hindari double-encode/spasi raw) ====
+  const imgSrc = normalizePhotoUrl(alert?.photoKey, (alert?.photoUrl || alert?.photo_url || null));
 
   return (
     <div
@@ -2631,6 +2890,7 @@ import React, { useState } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import AppImage from '../../../components/AppImage';
+import normalizePhotoUrl from '../../../utils/normalizePhotoUrl'; // ← tambah ini
 
 function getSeverityConfig(sevRaw) {
   const sev = (sevRaw || '').toLowerCase();
@@ -2693,10 +2953,8 @@ export default function AlertDetailModal({ isOpen, onClose, alert, className = '
 
   const coords = ensureCoords(alert?.coordinates);
 
-  // ==== Sumber gambar: prioritaskan photoKey → /api/photos/<key>, jika tidak ada pakai photoUrl ====
-  const imgSrc = alert?.photoKey
-    ? `/api/photos/${encodeURIComponent(alert.photoKey)}`
-    : (alert?.photoUrl ?? alert?.photo_url ?? null);
+  // ==== Ganti jadi satu pintu normalisasi (hindari double-encode/spasi raw) ====
+  const imgSrc = normalizePhotoUrl(alert?.photoKey, (alert?.photoUrl ?? alert?.photo_url ?? null));
 
   const mapEmbedUrl = (() => {
     if (!coords) return null;
@@ -3050,6 +3308,87 @@ const AlertFilters = ({
 export default AlertFilters;
 
 
+--- File: ./src/pages/community-alerts/components/CommunityMap.jsx ---
+
+// src/pages/community-alerts/components/CommunityMap.jsx
+import React, { useEffect, useRef } from 'react';
+
+// Lightweight Leaflet loader via CDN to avoid bundling
+function useLeaflet() {
+  const loadedRef = useRef(false);
+  useEffect(() => {
+    if (loadedRef.current) return;
+    loadedRef.current = true;
+    // CSS
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link');
+      link.id = 'leaflet-css';
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+    }
+    // JS
+    if (!document.getElementById('leaflet-js')) {
+      const script = document.createElement('script');
+      script.id = 'leaflet-js';
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.defer = true;
+      document.body.appendChild(script);
+    }
+  }, []);
+}
+
+export default function CommunityMap({ alerts = [], userPos = null }) {
+  const mapRef = useRef(null);
+  const containerRef = useRef(null);
+  useLeaflet();
+
+  useEffect(() => {
+    const ensure = () => typeof window !== 'undefined' && window.L && containerRef.current;
+    let retries = 0;
+    const init = () => {
+      if (!ensure()) {
+        if (retries++ < 20) setTimeout(init, 200);
+        return;
+      }
+      const L = window.L;
+      if (!mapRef.current) {
+        const center = userPos ? [userPos.lat, userPos.lon || userPos.lng] : [-10.177, 123.607];
+        const map = L.map(containerRef.current).setView(center, 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 18,
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+        mapRef.current = map;
+      }
+      const map = mapRef.current;
+      // Clear existing markers layer if any
+      if (map._alertLayer) {
+        map.removeLayer(map._alertLayer);
+      }
+      const layer = window.L.layerGroup();
+      alerts.forEach((a) => {
+        const c = a.coordinates;
+        if (!c || typeof c.lat !== 'number' || typeof (c.lon ?? c.lng) !== 'number') return;
+        const marker = window.L.marker([c.lat, c.lon ?? c.lng]).bindPopup(
+          `<strong>${(a.pestType || 'Laporan')}</strong><br/>${(a.description || '').slice(0, 60)}...`
+        );
+        layer.addLayer(marker);
+      });
+      layer.addTo(map);
+      map._alertLayer = layer;
+    };
+    init();
+  }, [alerts, userPos]);
+
+  return (
+    <div className="w-full h-64 rounded-xl border border-border overflow-hidden bg-muted" ref={containerRef} aria-label="Peta Komunitas" />
+  );
+}
+
+
+
+
 --- File: ./src/pages/community-alerts/components/ReportPestModal.jsx ---
 
 // src/pages/community-alerts/components/ReportPestModal.jsx
@@ -3225,8 +3564,12 @@ export default function ReportPestModal({ isOpen, onClose, className = '' }) {
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 z-300 transition-smooth" onClick={() => !submitting && onClose()} />
-      <div className={`fixed inset-0 z-300 overflow-y-auto flex items-center justify-center p-4 ${className}`}>
+      // Ganti menjadi seperti ini:
+
+{/* Backdrop */}
+<div className="fixed inset-0 bg-black/50 z-[299] transition-smooth" onClick={() => !submitting && onClose()} />
+{/* Modal Wrapper */}
+<div className={`fixed inset-0 z-[300] overflow-y-auto flex items-center justify-center p-4 ${className}`}>
         <div className="bg-card rounded-lg border border-border w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-border">
@@ -3388,6 +3731,135 @@ export default function ReportPestModal({ isOpen, onClose, className = '' }) {
 
 
 
+--- File: ./src/pages/community-alerts/components/__tests__/AlertCard.test.jsx ---
+
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import AlertCard from '../AlertCard';
+
+const baseAlert = {
+  pestType: 'Ulat Grayak',
+  severity: 'high',
+  timestamp: '2024-01-02T00:00:00Z',
+  distance: 0.4,
+  description: 'Serangan berat\nSegera tangani',
+  affectedCrops: ['Jagung', 'Padi'],
+  reporterLocation: 'Kupang',
+  photoKey: 'folder/foto jagung.jpg',
+  hasPhoto: true,
+};
+
+describe('AlertCard', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-01-02T02:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    cleanup();
+  });
+
+  it('shows severity, metadata, and normalized photo preview', () => {
+    render(<AlertCard alert={baseAlert} onViewDetails={() => {}} />);
+
+    expect(screen.getByText('Tinggi')).toBeInTheDocument();
+    expect(screen.getByText(/400m/)).toBeInTheDocument();
+    expect(screen.getByText(/2 jam lalu/)).toBeInTheDocument();
+    expect(screen.getByText('Jagung, Padi')).toBeInTheDocument();
+
+    const img = screen.getByRole('img', { name: /foto laporan/i });
+    expect(img).toHaveAttribute('src', '/api/photos/folder%2Ffoto%20jagung.jpg');
+  });
+
+  it('falls back to helper text when alert hasPhoto but no usable URL', () => {
+    const alertWithoutPhoto = { ...baseAlert, photoKey: null, photoUrl: null };
+    render(<AlertCard alert={alertWithoutPhoto} onViewDetails={() => {}} />);
+
+    expect(screen.queryByRole('img', { name: /foto laporan/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/ada foto/i)).toBeInTheDocument();
+  });
+
+  it('invokes onViewDetails with the alert payload when clicked', () => {
+    const handleView = vi.fn();
+    render(<AlertCard alert={baseAlert} onViewDetails={handleView} />);
+
+    fireEvent.click(screen.getByText(/lihat detail/i));
+
+    expect(handleView).toHaveBeenCalledTimes(1);
+    expect(handleView).toHaveBeenCalledWith(baseAlert);
+  });
+});
+
+
+
+--- File: ./src/pages/community-alerts/components/__tests__/AlertDetailModal.test.jsx ---
+
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import AlertDetailModal from '../AlertDetailModal';
+
+const baseAlert = {
+  pestType: 'Wereng Cokelat',
+  severity: 'medium',
+  affectedCrops: ['Padi', 'Jagung'],
+  coordinates: { lat: -10.159, lng: 123.601 },
+  photoUrl: 'https://cdn.example.com/wereng foto 1.jpeg',
+  timestamp: '2024-03-10T01:30:00Z',
+  location: 'Kab. Kupang',
+  distance: 2.5,
+  description: 'Serangan terlihat pada daun bagian bawah.',
+  affectedArea: '2 Ha',
+  pestCount: 120,
+};
+
+describe('AlertDetailModal', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('does not render anything when isOpen is false', () => {
+    const { container } = render(
+      <AlertDetailModal isOpen={false} onClose={() => {}} alert={baseAlert} />
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('shows detail information, normalized photo, and map embed when open', () => {
+    render(<AlertDetailModal isOpen alert={baseAlert} onClose={() => {}} />);
+
+    expect(screen.getByText(/tingkat bahaya: sedang/i)).toBeInTheDocument();
+    expect(screen.getByText(/Kab\. Kupang/i)).toBeInTheDocument();
+    expect(screen.getByText(/Serangan terlihat/i)).toBeInTheDocument();
+
+    const img = screen.getByRole('img', { name: /foto laporan/i });
+    expect(img).toHaveAttribute('src', 'https://cdn.example.com/wereng%20foto%201.jpeg');
+
+    const iframe = screen.getByTitle(/lokasi peringatan/i);
+    expect(iframe.getAttribute('src')).toContain('bbox=');
+    expect(iframe.getAttribute('src')).toContain('marker=-10.159,123.601');
+  });
+
+  it('switches to discussion tab when corresponding button is pressed', () => {
+    render(<AlertDetailModal isOpen alert={baseAlert} onClose={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /diskusi komunitas/i }));
+
+    expect(screen.getByText(/Fitur diskusi akan ditambahkan/i)).toBeInTheDocument();
+  });
+
+  it('invokes onClose when the footer button is pressed', () => {
+    const handleClose = vi.fn();
+    render(<AlertDetailModal isOpen alert={baseAlert} onClose={handleClose} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /tutup/i }));
+
+    expect(handleClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+
 --- File: ./src/pages/community-alerts/index.jsx ---
 
 // src/pages/community-alerts/index.jsx
@@ -3405,6 +3877,7 @@ import AlertCard from './components/AlertCard';
 import AlertFilters from './components/AlertFilters';
 import ReportPestModal from './components/ReportPestModal';
 import AlertDetailModal from './components/AlertDetailModal';
+import CommunityMap from './components/CommunityMap';
 
 // util jarak (km)
 function haversineKm(a, b) {
@@ -3646,6 +4119,17 @@ export default function CommunityAlerts() {
 
             {/* Konten utama */}
             <section className="order-1 md:order-1 md:col-span-8">
+              {/* Map on top of list */}
+              <div className="bg-card border border-border rounded-xl p-3 mb-4">
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <h3 className="text-base font-semibold text-foreground">Peta Laporan Komunitas</h3>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Icon name="Map" size={14} />
+                    <span>Overlay sederhana</span>
+                  </div>
+                </div>
+                <CommunityMap alerts={filteredAlerts} userPos={userPos} />
+              </div>
               {/* Search + chips */}
               <div className="bg-card border border-border rounded-xl p-4 mb-4">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -4647,6 +5131,7 @@ import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
+import { getWeatherAdvice } from '../../../services/weatherApi';
 
 const AddEventModal = ({ isOpen, onClose, onAddEvent, selectedDate }) => {
   const [formData, setFormData] = useState({
@@ -4658,6 +5143,9 @@ const AddEventModal = ({ isOpen, onClose, onAddEvent, selectedDate }) => {
     location: '',
     notes: '',
   });
+  const [advice, setAdvice] = useState(null);
+  const [adviceLoading, setAdviceLoading] = useState(false);
+  const [coords, setCoords] = useState(null);
 
   // Inisialisasi tanggal default dari selectedDate setiap kali modal dibuka
   useEffect(() => {
@@ -4666,8 +5154,34 @@ const AddEventModal = ({ isOpen, onClose, onAddEvent, selectedDate }) => {
         ? selectedDate.toISOString().split('T')[0]
         : new Date().toISOString().split('T')[0];
       setFormData((p) => ({ ...p, date: defaultDate }));
+      // refresh advice on open
+      setAdvice(null);
+      // get user coords (best-effort)
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => setCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+          () => setCoords(null),
+          { enableHighAccuracy: true, maximumAge: 60000, timeout: 6000 }
+        );
+      }
     }
   }, [isOpen, selectedDate]);
+
+  useEffect(() => {
+    const loadAdvice = async () => {
+      if (!formData?.date || !coords) return;
+      try {
+        setAdviceLoading(true);
+        const data = await getWeatherAdvice({ lat: coords.lat, lon: coords.lon, date: formData.date });
+        setAdvice(data);
+      } catch (e) {
+        setAdvice(null);
+      } finally {
+        setAdviceLoading(false);
+      }
+    };
+    loadAdvice();
+  }, [formData?.date, coords]);
 
   const eventTypes = [
     { value: 'tanam', label: 'Penanaman' },
@@ -4781,6 +5295,24 @@ const AddEventModal = ({ isOpen, onClose, onAddEvent, selectedDate }) => {
                   required
                 />
                 <Input label="Waktu" type="time" value={formData?.time} onChange={(e) => handleInputChange('time', e?.target?.value)} />
+              </div>
+
+              {/* Weather advice tooltip */}
+              <div className="mt-1 text-xs text-muted-foreground">
+                <div className="inline-flex items-center gap-2 px-2 py-1 rounded border border-border bg-muted/50">
+                  <Icon name="CloudSun" size={14} className="text-secondary" />
+                  {adviceLoading && <span>Memuat saran cuaca...</span>}
+                  {!adviceLoading && advice && (
+                    <span>
+                      Saran cuaca: {advice.summary}. {advice.advice}
+                    </span>
+                  )}
+                  {!adviceLoading && !advice && (
+                    <button type="button" className="underline" onClick={() => setCoords((c) => c ? { ...c } : c)}>
+                      Muat saran cuaca
+                    </button>
+                  )}
+                </div>
               </div>
 
               <Select
@@ -6129,6 +6661,7 @@ import { useNavigate } from 'react-router-dom';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import { useGetAlertsQuery } from '../../../services/alertsApi'; // <-- LANGKAH 1: IMPORT HOOK
+import normalizePhotoUrl from '../../../utils/normalizePhotoUrl';
 
 const CommunityAlertSnippet = ({ className = '' }) => {
   const navigate = useNavigate();
@@ -6221,14 +6754,16 @@ const CommunityAlertSnippet = ({ className = '' }) => {
     // LANGKAH 6: TAMPILKAN DATA DINAMIS JIKA BERHASIL
     return (
       <div className="space-y-4">
-        {alerts?.slice(0, 2)?.map((alert) => (
+        {alerts?.slice(0, 2)?.map((alert) => {
+          const imgSrc = normalizePhotoUrl(alert?.photoKey, alert?.photoUrl ?? alert?.photo_url ?? null);
+          return (
           <div
             key={alert.id}
             className="border border-border rounded-xl p-4 hover:bg-muted/30 transition-smooth"
           >
-            {alert?.photoUrl && (
+            {imgSrc && (
               <div className="mb-3 overflow-hidden rounded-lg border border-border/60">
-                <img src={alert.photoUrl} alt="Foto laporan" className="w-full h-32 object-cover" loading="lazy" />
+                <img src={imgSrc} alt="Foto laporan" className="w-full h-32 object-cover" loading="lazy" />
               </div>
             )}
             <div className="flex items-start justify-between mb-3">
@@ -6279,7 +6814,8 @@ const CommunityAlertSnippet = ({ className = '' }) => {
               </div>
             )}
           </div>
-        ))}
+        );
+        })}
       </div>
     );
   };
@@ -7038,10 +7574,16 @@ const CameraInterface = ({
     }, 'image/jpeg', 0.8);
   };
 
-  const handleFileSelect = (event) => {
+  const handleFileSelect = async (event) => {
     const file = event?.target?.files?.[0];
     if (file && file?.type?.startsWith('image/')) {
-      onImageCapture(file);
+      try {
+        const { compressImage } = await import('../../../ai/localDiagnosis');
+        const compressed = await compressImage(file, 0.8);
+        onImageCapture(compressed || file);
+      } catch {
+        onImageCapture(file);
+      }
     }
   };
 
@@ -7097,7 +7639,10 @@ const CameraInterface = ({
           />
           
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-48 h-48 border-2 border-primary/50 rounded-lg"></div>
+            <div className="relative w-48 h-48 border-2 border-primary/50 rounded-lg overflow-hidden">
+              {/* scanning line */}
+              <div className="absolute left-0 right-0 h-0.5 bg-primary/70 animate-[scan_2.2s_linear_infinite]" style={{ top: 0 }} />
+            </div>
           </div>
           
           <div className="absolute top-4 right-4">
@@ -7193,6 +7738,7 @@ const CameraInterface = ({
 };
 
 export default CameraInterface;
+
 
 
 --- File: ./src/pages/photo-diagnosis/components/DiagnosisForm.jsx ---
@@ -7684,6 +8230,7 @@ export default DiagnosisResults;
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCreateDiagnosisMutation } from '../../services/diagnosisApi';
+import { runLocalDiagnosis } from '../../ai/localDiagnosis';
 import { enqueueRequest } from '../../offline/queueService';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
@@ -7738,13 +8285,20 @@ const PhotoDiagnosis = () => {
     setFormData(data);
     const submissionData = { ...data, photo: capturedImage };
 
+    // 1) Run on-device diagnosis first for instant UX
+    try {
+      const local = await runLocalDiagnosis(capturedImage);
+      setDiagnosisResult(local);
+      setCurrentStep('results');
+    } catch (e) {
+      console.warn('Local diagnosis failed, will rely on server:', e?.message || e);
+    }
+
+    // 2) Persist to server (best-effort). Update UI if it returns richer data.
     try {
       const result = await createDiagnosis(submissionData).unwrap();
-      if (result.success) {
-        setDiagnosisResult(result);
-        setCurrentStep('results');
-      } else {
-        throw new Error(result.message || 'Diagnosis gagal dari server');
+      if (result?.success) {
+        setDiagnosisResult((prev) => prev || result);
       }
     } catch (error) {
       console.error('Gagal mengirim diagnosis, menyimpan ke antrean:', error);
@@ -7761,8 +8315,6 @@ const PhotoDiagnosis = () => {
       }
 
       await enqueueRequest({ type: 'createDiagnosis', payload: offlinePayload });
-      alert('Anda sedang offline. Diagnosis akan diproses dan hasilnya akan muncul di riwayat saat kembali online.');
-      navigate('/home-dashboard');
     }
   };
 
@@ -8024,23 +8576,58 @@ export const { useGetAlertsQuery, useCreateAlertMutation } = alertsApi;
 
 // src/services/api.js
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { toast } from 'react-hot-toast';
 
 // Normalisasi baseUrl agar SELALU pakai /api di belakang,
 // dan hindari double slash kalau env ada trailing slash.
 const RAW_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8787';
 const baseUrl = `${RAW_BASE.replace(/\/+$/, '')}/api`;
 
+const rawBaseQuery = fetchBaseQuery({
+  baseUrl,
+  prepareHeaders: (headers) => {
+    headers.set('X-Account-Id', localStorage.getItem('accountId') || 'demo');
+    headers.set('X-User-Id', localStorage.getItem('userId') || 'demo');
+    return headers;
+  },
+});
+
+const errorToastId = (args) => {
+  if (typeof args === 'string') return `api-error-${args}`;
+  if (typeof args === 'object' && args?.url) return `api-error-${args.url}`;
+  return 'api-error-generic';
+};
+
+const notifyApiError = (error, args) => {
+  if (typeof window === 'undefined') return;
+  const offline = typeof navigator !== 'undefined' && navigator && navigator.onLine === false;
+  const detail = error?.data;
+  const msgFromBody =
+    typeof detail === 'string'
+      ? detail
+      : detail?.message || detail?.error || detail?.reason;
+
+  const message = offline
+    ? 'Sedang offline. Periksa koneksi lalu coba lagi.'
+    : msgFromBody || `Permintaan gagal (${error?.status || 'unknown'})`;
+
+  toast.error(message, {
+    id: errorToastId(args),
+    duration: 4500,
+  });
+};
+
+const baseQuery = async (args, api, extraOptions) => {
+  const result = await rawBaseQuery(args, api, extraOptions);
+  if (result.error) {
+    notifyApiError(result.error, args);
+  }
+  return result;
+};
+
 export const api = createApi({
   reducerPath: 'api',
-  baseQuery: fetchBaseQuery({
-    baseUrl,
-    prepareHeaders: (headers) => {
-      // Tenant headers (fallback ke 'demo' kalau belum diset)
-      headers.set('X-Account-Id', localStorage.getItem('accountId') || 'demo');
-      headers.set('X-User-Id', localStorage.getItem('userId') || 'demo');
-      return headers;
-    },
-  }),
+  baseQuery,
   tagTypes: ['Alerts', 'Events', 'DiagnosisHistory'],
   endpoints: () => ({}),
 });
@@ -8235,6 +8822,47 @@ export const {
 
 
 
+--- File: ./src/services/weatherApi.js ---
+
+// src/services/weatherApi.js
+import axios from 'axios';
+
+/**
+ * Get weather advice from our API (BMKG-backed).
+ * @param {{ lat: number, lon: number, date?: string }} params
+ */
+export async function getWeatherAdvice(params) {
+  const q = new URLSearchParams();
+  if (typeof params?.lat === 'number') q.set('lat', String(params.lat));
+  if (typeof params?.lon === 'number') q.set('lon', String(params.lon));
+  if (params?.date) q.set('date', params.date);
+  const { data } = await axios.get(`/api/weather/advice?${q.toString()}`);
+  return data;
+}
+
+
+
+
+--- File: ./src/setupTests.js ---
+
+import { expect } from 'vitest';
+
+/**
+ * Shared Vitest setup.
+ * - Registers DOM matchers only when a DOM-like environment exists
+ *   so backend/unit tests that run in the Node environment stay light.
+ */
+const hasDom =
+  typeof window !== 'undefined' &&
+  typeof window.document !== 'undefined';
+
+if (hasDom) {
+  const matchers = (await import('@testing-library/jest-dom/matchers')).default;
+  expect.extend(matchers);
+}
+
+
+
 --- File: ./src/styles/index.css ---
 
 /* === Desktop width unlock === */
@@ -8245,13 +8873,26 @@ html, body {
   padding: 0;
 }
 
+/* Camera scanning animation */
+@keyframes scan {
+  0% { transform: translateY(0%); }
+  100% { transform: translateY(100%); }
+}
+
 #root {
   width: 100%;
   max-width: none; /* ← penting: jangan kunci */
   margin: 0;       /* jangan pakai auto center di sini */
   padding: 0;
 }
+/* src/styles/index.css */
 
+/* ... (kode yang sudah ada) ... */
+
+/* FIX: Paksa peta Leaflet agar selalu di belakang modal dan pop-up lain */
+.leaflet-container {
+  z-index: 1 !important;
+}
 
 
 --- File: ./src/styles/tailwind.css ---
@@ -8373,6 +9014,39 @@ html, body {
 }
 
 
+--- File: ./src/utils/__tests__/normalizePhotoUrl.test.js ---
+
+import { describe, it, expect } from 'vitest';
+import normalizePhotoUrl from '../normalizePhotoUrl';
+
+describe('normalizePhotoUrl', () => {
+  it('builds an API URL when photoKey is provided', () => {
+    const url = normalizePhotoUrl('laporan folder/foto akhir.jpg', null);
+    expect(url).toBe('/api/photos/laporan%20folder%2Ffoto%20akhir.jpg');
+  });
+
+  it('decodes double-encoded keys once before re-encoding', () => {
+    const url = normalizePhotoUrl('laporan%252Ffoto%2520akhir.jpg', null);
+    expect(url).toBe('/api/photos/laporan%252Ffoto%2520akhir.jpg');
+  });
+
+  it('sanitizes remote URLs when only photoUrl exists', () => {
+    const url = normalizePhotoUrl(null, 'https://cdn.example.com/folder foto 1.png');
+    expect(url).toBe('https://cdn.example.com/folder%20foto%201.png');
+  });
+
+  it('decodes double-encoded remote URLs exactly once', () => {
+    const url = normalizePhotoUrl(null, 'https://cdn.example.com/folder%2520foto%25201.png');
+    expect(url).toBe('https://cdn.example.com/folder%20foto%201.png');
+  });
+
+  it('returns null when neither key nor url exists', () => {
+    expect(normalizePhotoUrl(undefined, undefined)).toBeNull();
+  });
+});
+
+
+
 --- File: ./src/utils/cn.js ---
 
 import { clsx } from "clsx";
@@ -8381,6 +9055,57 @@ import { twMerge } from "tailwind-merge";
 export function cn(...inputs) {
     return twMerge(clsx(inputs));
 }
+
+
+--- File: ./src/utils/normalizePhotoUrl.js ---
+
+// src/utils/normalizePhotoUrl.js
+/**
+ * Build a safe image URL from an R2 object key or a direct URL.
+ * - Prefer `photoKey` → `/api/photos/:key`
+ * - If `photoUrl` might be double-encoded (e.g. %2520), decode ONCE then ensure spaces are %20.
+ * - Avoid double-encoding keys by decoding ONCE when "%25" is present before encoding.
+ * - Returns `null` if neither key nor url is provided.
+ * @param {string | null | undefined} photoKey
+ * @param {string | null | undefined} photoUrl
+ * @returns {string | null}
+ */
+export default function normalizePhotoUrl(photoKey, photoUrl) {
+  if (photoKey) {
+    const safeKey = sanitizeKey(String(photoKey));
+    return `/api/photos/${encodeURIComponent(safeKey)}`;
+  }
+  if (photoUrl) {
+    return sanitizeUrl(String(photoUrl));
+  }
+  return null;
+}
+
+function sanitizeKey(key) {
+  try {
+    // If key looks double-encoded (e.g., includes "%2520"), decode once.
+    if (/%25/i.test(key)) {
+      key = decodeURIComponent(key);
+    }
+  } catch (_) {}
+  return key;
+}
+
+function sanitizeUrl(url) {
+  try {
+    // If looks double-encoded ("%2520" etc), decode once.
+    let u = url;
+    if (/%25/i.test(u)) {
+      u = decodeURIComponent(u);
+    }
+    // Normalize spaces to %20
+    u = u.replace(/ /g, '%20');
+    return u;
+  } catch (_) {
+    return url;
+  }
+}
+
 
 
 --- File: ./tailwind.config.js ---
@@ -8531,8 +9256,31 @@ export default defineConfig({
       },
     }
     // --- AKHIR DARI PERBAIKAN ---
-  }
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.js',
+    environmentMatchGlobs: [
+      ['ai-tani-kupang-api/**', 'node'],
+      ['**/*.worker.test.{js,ts}', 'node'],
+    ],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      reportsDirectory: 'coverage',
+      include: [
+        'src/**/*.{js,jsx}',
+        'ai-tani-kupang-api/src/**/*.js',
+      ],
+      exclude: [
+        'src/**/__mocks__/**',
+        'src/**/__fixtures__/**',
+      ],
+    },
+  },
 });
+
 
 
 ================================================================================

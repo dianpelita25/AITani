@@ -25,5 +25,27 @@ export default defineConfig({
       },
     }
     // --- AKHIR DARI PERBAIKAN ---
-  }
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.js',
+    environmentMatchGlobs: [
+      ['ai-tani-kupang-api/**', 'node'],
+      ['**/*.worker.test.{js,ts}', 'node'],
+    ],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      reportsDirectory: 'coverage',
+      include: [
+        'src/**/*.{js,jsx}',
+        'ai-tani-kupang-api/src/**/*.js',
+      ],
+      exclude: [
+        'src/**/__mocks__/**',
+        'src/**/__fixtures__/**',
+      ],
+    },
+  },
 });

@@ -9,6 +9,7 @@ import App from "./App";
 import "./styles/tailwind.css";
 import "./styles/index.css";
 
+
 console.log("Aplikasi Konfigurasi: Membuat Redux store."); // <-- PENANDA 2
 const store = configureStore({
   reducer: {

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import { useGetAlertsQuery } from '../../../services/alertsApi'; // <-- LANGKAH 1: IMPORT HOOK
+import normalizePhotoUrl from '../../../utils/normalizePhotoUrl';
 
 const CommunityAlertSnippet = ({ className = '' }) => {
   const navigate = useNavigate();
@@ -95,14 +96,16 @@ const CommunityAlertSnippet = ({ className = '' }) => {
     // LANGKAH 6: TAMPILKAN DATA DINAMIS JIKA BERHASIL
     return (
       <div className="space-y-4">
-        {alerts?.slice(0, 2)?.map((alert) => (
+        {alerts?.slice(0, 2)?.map((alert) => {
+          const imgSrc = normalizePhotoUrl(alert?.photoKey, alert?.photoUrl ?? alert?.photo_url ?? null);
+          return (
           <div
             key={alert.id}
             className="border border-border rounded-xl p-4 hover:bg-muted/30 transition-smooth"
           >
-            {alert?.photoUrl && (
+            {imgSrc && (
               <div className="mb-3 overflow-hidden rounded-lg border border-border/60">
-                <img src={alert.photoUrl} alt="Foto laporan" className="w-full h-32 object-cover" loading="lazy" />
+                <img src={imgSrc} alt="Foto laporan" className="w-full h-32 object-cover" loading="lazy" />
               </div>
             )}
             <div className="flex items-start justify-between mb-3">
@@ -153,7 +156,8 @@ const CommunityAlertSnippet = ({ className = '' }) => {
               </div>
             )}
           </div>
-        ))}
+        );
+        })}
       </div>
     );
   };

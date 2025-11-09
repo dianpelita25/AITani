@@ -1,4 +1,4 @@
-ai_tani_kupang Tallwind
+ai_tani_kupang Tallwind - Copy
 ├── .env.txt
 ├── KONTEKS_WEB.txt
 ├── README.md
@@ -12,6 +12,12 @@ ai_tani_kupang Tallwind
 │   │   │       ├── d1
 │   │   │       │   └── miniflare-D1DatabaseObject
 │   │   │       │       └── 5ae9da099f6cfd381eabd0dd98dea07b3919d6ef80713ba9d8802efef8b9d036.sqlite
+│   │   │       ├── kv
+│   │   │       │   ├── 11111111111111111111111111111111
+│   │   │       │   │   └── blobs
+│   │   │       │   │       └── e1bd06f3a295b5ad17a7d0e98f7a1c289c80fd254c9d7b79228b0f5e59d08bf80000019a67fe6e06
+│   │   │       │   └── miniflare-KVNamespaceObject
+│   │   │       │       └── 42a14b3d6499ce0dcdd06a2371c3642c49412cd8c3e8bd4d1d315f08760f1e0d.sqlite
 │   │   │       ├── r2
 │   │   │       │   ├── aitaniweb-photos
 │   │   │       │   │   └── blobs
@@ -25,15 +31,19 @@ ai_tani_kupang Tallwind
 │   │   │       │   │       ├── 4c511463f771697455501e31ea877679e92a5093f34e7e991bd14dee8606cb4e000001994109c8a8
 │   │   │       │   │       ├── 4dd517d5067101f7b8c5456d2421002a6e823aac826a7ccbf031837427315971000001993d32ee9e
 │   │   │       │   │       ├── 53b24ebdd1127dfdfefc42366cdc849f655b13ab7eb34316404c75e051a2e6d7000001993c46d22e
+│   │   │       │   │       ├── 5b1591bca6cd8eaa17066cf41a2a942f258187eb7daf1193069b9e03d52c5b0d0000019a67deea54
 │   │   │       │   │       ├── 5f56014dbb5e8615e1d5187f3ba6bf7c9f0c240c71ca211e15ac53bd72f86b3f000001993c47f3f8
 │   │   │       │   │       ├── 7f31aeee0a01ea2ea1dcb113eb50456be7044a2efbf95ccd17c37b9f8855938b0000019941489186
 │   │   │       │   │       ├── 7fa5951b56477c85244f82055e414022f5ed79edacf46bf4ab567dca5136df1f000001993d0119d2
 │   │   │       │   │       ├── 9e682555d64f8b0134e00a509eefe12dbde07847b668b998769d00b54ba39609000001993ccf6672
+│   │   │       │   │       ├── 9e876b7c39e08ad2faa8b3b3867942195e49b88c4f95b22a24168e90765a01c40000019a67dee9ea
 │   │   │       │   │       ├── a250c881bec64b10d3e9d2a532f01afe488974d5268fdac3c940fa51e375e93b000001994113f0c0
 │   │   │       │   │       ├── a36d44fe74f8355f466a3b592d40e4266fefd6cbb1f91ccb68d9eb175e1e27d60000019940b772f5
 │   │   │       │   │       ├── ac4e9c3eb382058d1ec7de4caa1c8f5dc7b27c10e2e6a224f39eecf281bd5029000001993b67f052
 │   │   │       │   │       ├── bcfd32ade40220407d8de3b167dd369a9d505f6fe7e95eb68de7e0dd2eeb3e7c0000019940fee848
+│   │   │       │   │       ├── bd7bf205f5da6e573ababfc5058526f5d4457116a42febd63786bcdb4f4966210000019a11c7dcd3
 │   │   │       │   │       ├── ce356431fc5033347f0b87b0f880a58a183bec82a94141e65a27f1d4eee2da010000019937b79fba
+│   │   │       │   │       ├── db9cd11ad9fd33311a2bc0aecbcc2e0d599fbc9823d31d4676091aa46b890efd0000019a11c0ebd4
 │   │   │       │   │       ├── e5a16bb6a1c5e4c352b102fa6c4a319587ffb00d1e3bd963430eabaacb632be0000001993969131b
 │   │   │       │   │       ├── e969717f15c765e981c928d7907c51c53e9023a29e71b5643fa1f48e98d425c30000019941111e42
 │   │   │       │   │       ├── fe137531195cffad3400a28343216561be8aad29c721a99e57f2e76d0660bda3000001993d3f689e
@@ -42,6 +52,14 @@ ai_tani_kupang Tallwind
 │   │   │       │       └── 9720582e742b2d0573c56af6f4fb8eaeeff0b0843e2eaa987d9e5501564a6d80.sqlite
 │   │   │       └── workflows
 │   │   └── tmp
+│   │       ├── bundle-AQSWBc
+│   │       │   ├── checked-fetch.js
+│   │       │   ├── middleware-insertion-facade.js
+│   │       │   └── middleware-loader.entry.ts
+│   │       ├── bundle-AZDTtY
+│   │       │   ├── checked-fetch.js
+│   │       │   ├── middleware-insertion-facade.js
+│   │       │   └── middleware-loader.entry.ts
 │   │       ├── bundle-CeSID1
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
@@ -58,7 +76,7 @@ ai_tani_kupang Tallwind
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
 │   │       │   └── middleware-loader.entry.ts
-│   │       ├── bundle-uI5BaS
+│   │       ├── bundle-zBigtK
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
 │   │       │   └── middleware-loader.entry.ts
@@ -68,12 +86,20 @@ ai_tani_kupang Tallwind
 │   │       ├── dev-8dZu5J
 │   │       │   ├── index.js
 │   │       │   └── index.js.map
-│   │       ├── dev-Kwsqpq
+│   │       ├── dev-ANleR5
 │   │       │   ├── index.js
 │   │       │   └── index.js.map
-│   │       └── dev-byeFH4
+│   │       ├── dev-bTzZ0x
+│   │       │   ├── index.js
+│   │       │   └── index.js.map
+│   │       ├── dev-byeFH4
+│   │       │   ├── index.js
+│   │       │   └── index.js.map
+│   │       └── dev-pzrtOZ
 │   │           ├── index.js
 │   │           └── index.js.map
+│   ├── fixtures
+│   │   └── alerts.fixture.json
 │   ├── local_schema.sql
 │   ├── migrations
 │   │   ├── 001_schema.sql
@@ -92,12 +118,23 @@ ai_tani_kupang Tallwind
 │   ├── package.json
 │   ├── remote_schema.sql
 │   ├── src
-│   │   └── index.js
+│   │   ├── index.js
+│   │   └── routes
+│   │       ├── __tests__
+│   │       │   ├── dev.seed.worker.test.js
+│   │       │   ├── health.worker.test.js
+│   │       │   └── photos.worker.test.js
+│   │       ├── health.js
+│   │       └── photos.js
 │   ├── tmp
 │   │   └── out.txt
 │   └── wrangler.toml
 ├── ambil-kode-web.mjs
 ├── buat-struktur.mjs
+├── docs
+│   ├── WOW-RUNBOOK.md
+│   ├── demo-assets
+│   └── testing.md
 ├── index.html
 ├── jsconfig.json
 ├── package.json
@@ -106,12 +143,16 @@ ai_tani_kupang Tallwind
 │   ├── assets
 │   │   └── images
 │   ├── manifest.json
+│   ├── model
+│   │   └── README.txt
 │   └── robots.txt
 ├── scripts
 │   └── simulate.mjs
 ├── src
 │   ├── App.jsx
 │   ├── Routes.jsx
+│   ├── ai
+│   │   └── localDiagnosis.js
 │   ├── components
 │   │   ├── AppIcon.jsx
 │   │   ├── AppImage.jsx
@@ -141,7 +182,11 @@ ai_tani_kupang Tallwind
 │   │   │   │   ├── AlertCard.jsx
 │   │   │   │   ├── AlertDetailModal.jsx
 │   │   │   │   ├── AlertFilters.jsx
-│   │   │   │   └── ReportPestModal.jsx
+│   │   │   │   ├── CommunityMap.jsx
+│   │   │   │   ├── ReportPestModal.jsx
+│   │   │   │   └── __tests__
+│   │   │   │       ├── AlertCard.test.jsx
+│   │   │   │       └── AlertDetailModal.test.jsx
 │   │   │   └── index.jsx
 │   │   ├── diagnosis-history
 │   │   │   ├── components
@@ -183,12 +228,17 @@ ai_tani_kupang Tallwind
 │   │   ├── alertsApi.js
 │   │   ├── api.js
 │   │   ├── diagnosisApi.js
-│   │   └── eventsApi.js
+│   │   ├── eventsApi.js
+│   │   └── weatherApi.js
+│   ├── setupTests.js
 │   ├── styles
 │   │   ├── index.css
 │   │   └── tailwind.css
 │   └── utils
-│       └── cn.js
+│       ├── __tests__
+│       │   └── normalizePhotoUrl.test.js
+│       ├── cn.js
+│       └── normalizePhotoUrl.js
 ├── struktur_proyek.txt
 ├── tailwind.config.js
 └── vite.config.mjs

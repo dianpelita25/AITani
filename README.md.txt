@@ -98,32 +98,34 @@ ai_tani_kupang Tallwind
 │   │   │       ├── d1
 │   │   │       │   └── miniflare-D1DatabaseObject
 │   │   │       │       └── 5ae9da099f6cfd381eabd0dd98dea07b3919d6ef80713ba9d8802efef8b9d036.sqlite
+│   │   │       ├── kv
+│   │   │       │   └── miniflare-KVNamespaceObject
 │   │   │       ├── r2
 │   │   │       │   ├── aitaniweb-photos
 │   │   │       │   │   └── blobs
-│   │   │       │   │       ├── 145e90cb043214655da53ae60f9c3c2009de4b6be3a999bba7a27f84cb323fc1000001994137d690
-│   │   │       │   │       ├── 17e15f4549191400f985a15033fff5060a3e0a9158b89bcbe3577ed28653b962000001993b890340
-│   │   │       │   │       ├── 253d0cdf8758e01f6e554a0aba8b3db84c3e2e88baa9863caa81acbd91e623320000019941135d8f
-│   │   │       │   │       ├── 276d78488906b8780221d127ec03380b3f85d0ddf71984b8764b4e54f46a9122000001993d2bdef6
-│   │   │       │   │       ├── 2cab905cd4dbe0460feed4f34948ea1ec7622b5350f937ead18c80737b86180b000001993ce849c9
-│   │   │       │   │       ├── 2f8339ab856fcf0492eaeb8c384a711d06a84cc5eaa9dcf85e54c489bd8e08b5000001994112fbe6
-│   │   │       │   │       ├── 346334ec54382334f42d89a8bf4936d9c8bffb8ccc3c76b3494bb18b46a17704000001993c445ddd
-│   │   │       │   │       ├── 4c511463f771697455501e31ea877679e92a5093f34e7e991bd14dee8606cb4e000001994109c8a8
-│   │   │       │   │       ├── 4dd517d5067101f7b8c5456d2421002a6e823aac826a7ccbf031837427315971000001993d32ee9e
-│   │   │       │   │       ├── 53b24ebdd1127dfdfefc42366cdc849f655b13ab7eb34316404c75e051a2e6d7000001993c46d22e
-│   │   │       │   │       ├── 5f56014dbb5e8615e1d5187f3ba6bf7c9f0c240c71ca211e15ac53bd72f86b3f000001993c47f3f8
-│   │   │       │   │       ├── 7f31aeee0a01ea2ea1dcb113eb50456be7044a2efbf95ccd17c37b9f8855938b0000019941489186
-│   │   │       │   │       ├── 7fa5951b56477c85244f82055e414022f5ed79edacf46bf4ab567dca5136df1f000001993d0119d2
-│   │   │       │   │       ├── 9e682555d64f8b0134e00a509eefe12dbde07847b668b998769d00b54ba39609000001993ccf6672
-│   │   │       │   │       ├── a250c881bec64b10d3e9d2a532f01afe488974d5268fdac3c940fa51e375e93b000001994113f0c0
-│   │   │       │   │       ├── a36d44fe74f8355f466a3b592d40e4266fefd6cbb1f91ccb68d9eb175e1e27d60000019940b772f5
-│   │   │       │   │       ├── ac4e9c3eb382058d1ec7de4caa1c8f5dc7b27c10e2e6a224f39eecf281bd5029000001993b67f052
-│   │   │       │   │       ├── bcfd32ade40220407d8de3b167dd369a9d505f6fe7e95eb68de7e0dd2eeb3e7c0000019940fee848
-│   │   │       │   │       ├── ce356431fc5033347f0b87b0f880a58a183bec82a94141e65a27f1d4eee2da010000019937b79fba
-│   │   │       │   │       ├── e5a16bb6a1c5e4c352b102fa6c4a319587ffb00d1e3bd963430eabaacb632be0000001993969131b
-│   │   │       │   │       ├── e969717f15c765e981c928d7907c51c53e9023a29e71b5643fa1f48e98d425c30000019941111e42
-│   │   │       │   │       ├── fe137531195cffad3400a28343216561be8aad29c721a99e57f2e76d0660bda3000001993d3f689e
-│   │   │       │   │       └── ff95c365c0ae996938de2aa8ad5384fbe7a030460d5cefde6abe4c85fd3bceb1000001993b117a86
+│   │   │       │   │       ├── 145e90cb043214655da53ae60f9c3c2009de4b6be3a999bba7a27f84cb323fc1000001994137d690      
+│   │   │       │   │       ├── 17e15f4549191400f985a15033fff5060a3e0a9158b89bcbe3577ed28653b962000001993b890340      
+│   │   │       │   │       ├── 253d0cdf8758e01f6e554a0aba8b3db84c3e2e88baa9863caa81acbd91e623320000019941135d8f      
+│   │   │       │   │       ├── 276d78488906b8780221d127ec03380b3f85d0ddf71984b8764b4e54f46a9122000001993d2bdef6      
+│   │   │       │   │       ├── 2cab905cd4dbe0460feed4f34948ea1ec7622b5350f937ead18c80737b86180b000001993ce849c9      
+│   │   │       │   │       ├── 2f8339ab856fcf0492eaeb8c384a711d06a84cc5eaa9dcf85e54c489bd8e08b5000001994112fbe6      
+│   │   │       │   │       ├── 346334ec54382334f42d89a8bf4936d9c8bffb8ccc3c76b3494bb18b46a17704000001993c445ddd      
+│   │   │       │   │       ├── 4c511463f771697455501e31ea877679e92a5093f34e7e991bd14dee8606cb4e000001994109c8a8      
+│   │   │       │   │       ├── 4dd517d5067101f7b8c5456d2421002a6e823aac826a7ccbf031837427315971000001993d32ee9e      
+│   │   │       │   │       ├── 53b24ebdd1127dfdfefc42366cdc849f655b13ab7eb34316404c75e051a2e6d7000001993c46d22e      
+│   │   │       │   │       ├── 5f56014dbb5e8615e1d5187f3ba6bf7c9f0c240c71ca211e15ac53bd72f86b3f000001993c47f3f8      
+│   │   │       │   │       ├── 7f31aeee0a01ea2ea1dcb113eb50456be7044a2efbf95ccd17c37b9f8855938b0000019941489186      
+│   │   │       │   │       ├── 7fa5951b56477c85244f82055e414022f5ed79edacf46bf4ab567dca5136df1f000001993d0119d2      
+│   │   │       │   │       ├── 9e682555d64f8b0134e00a509eefe12dbde07847b668b998769d00b54ba39609000001993ccf6672      
+│   │   │       │   │       ├── a250c881bec64b10d3e9d2a532f01afe488974d5268fdac3c940fa51e375e93b000001994113f0c0      
+│   │   │       │   │       ├── a36d44fe74f8355f466a3b592d40e4266fefd6cbb1f91ccb68d9eb175e1e27d60000019940b772f5      
+│   │   │       │   │       ├── ac4e9c3eb382058d1ec7de4caa1c8f5dc7b27c10e2e6a224f39eecf281bd5029000001993b67f052      
+│   │   │       │   │       ├── bcfd32ade40220407d8de3b167dd369a9d505f6fe7e95eb68de7e0dd2eeb3e7c0000019940fee848      
+│   │   │       │   │       ├── ce356431fc5033347f0b87b0f880a58a183bec82a94141e65a27f1d4eee2da010000019937b79fba      
+│   │   │       │   │       ├── e5a16bb6a1c5e4c352b102fa6c4a319587ffb00d1e3bd963430eabaacb632be0000001993969131b      
+│   │   │       │   │       ├── e969717f15c765e981c928d7907c51c53e9023a29e71b5643fa1f48e98d425c30000019941111e42      
+│   │   │       │   │       ├── fe137531195cffad3400a28343216561be8aad29c721a99e57f2e76d0660bda3000001993d3f689e      
+│   │   │       │   │       └── ff95c365c0ae996938de2aa8ad5384fbe7a030460d5cefde6abe4c85fd3bceb1000001993b117a86      
 │   │   │       │   └── miniflare-R2BucketObject
 │   │   │       │       └── 9720582e742b2d0573c56af6f4fb8eaeeff0b0843e2eaa987d9e5501564a6d80.sqlite
 │   │   │       └── workflows
@@ -140,11 +142,11 @@ ai_tani_kupang Tallwind
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
 │   │       │   └── middleware-loader.entry.ts
-│   │       ├── bundle-rJpwiW
+│   │       ├── bundle-Wv8d8e
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
 │   │       │   └── middleware-loader.entry.ts
-│   │       ├── bundle-uI5BaS
+│   │       ├── bundle-rJpwiW
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
 │   │       │   └── middleware-loader.entry.ts
@@ -154,10 +156,10 @@ ai_tani_kupang Tallwind
 │   │       ├── dev-8dZu5J
 │   │       │   ├── index.js
 │   │       │   └── index.js.map
-│   │       ├── dev-Kwsqpq
+│   │       ├── dev-byeFH4
 │   │       │   ├── index.js
 │   │       │   └── index.js.map
-│   │       └── dev-byeFH4
+│   │       └── dev-qPJItj
 │   │           ├── index.js
 │   │           └── index.js.map
 │   ├── local_schema.sql
@@ -184,6 +186,8 @@ ai_tani_kupang Tallwind
 │   └── wrangler.toml
 ├── ambil-kode-web.mjs
 ├── buat-struktur.mjs
+├── docs
+│   └── WOW-RUNBOOK.md
 ├── index.html
 ├── jsconfig.json
 ├── package.json
@@ -192,12 +196,16 @@ ai_tani_kupang Tallwind
 │   ├── assets
 │   │   └── images
 │   ├── manifest.json
+│   ├── model
+│   │   └── README.txt
 │   └── robots.txt
 ├── scripts
 │   └── simulate.mjs
 ├── src
 │   ├── App.jsx
 │   ├── Routes.jsx
+│   ├── ai
+│   │   └── localDiagnosis.js
 │   ├── components
 │   │   ├── AppIcon.jsx
 │   │   ├── AppImage.jsx
@@ -227,6 +235,7 @@ ai_tani_kupang Tallwind
 │   │   │   │   ├── AlertCard.jsx
 │   │   │   │   ├── AlertDetailModal.jsx
 │   │   │   │   ├── AlertFilters.jsx
+│   │   │   │   ├── CommunityMap.jsx
 │   │   │   │   └── ReportPestModal.jsx
 │   │   │   └── index.jsx
 │   │   ├── diagnosis-history
@@ -269,7 +278,8 @@ ai_tani_kupang Tallwind
 │   │   ├── alertsApi.js
 │   │   ├── api.js
 │   │   ├── diagnosisApi.js
-│   │   └── eventsApi.js
+│   │   ├── eventsApi.js
+│   │   └── weatherApi.js
 │   ├── styles
 │   │   ├── index.css
 │   │   └── tailwind.css
@@ -278,6 +288,7 @@ ai_tani_kupang Tallwind
 ├── struktur_proyek.txt
 ├── tailwind.config.js
 └── vite.config.mjs
+
 
 
 

@@ -1,4 +1,7 @@
 // ai-tani-kupang-api/src/index.js
+import { handlePhotoGet } from './routes/photos';
+import alertsFixture from '../fixtures/alerts.fixture.json';
+import { handleRegister, handleLogin } from './routes/auth';
 
 export default {
   async fetch(request, env) {
@@ -10,17 +13,74 @@ export default {
     const rawPath = url.pathname;
     const pathname = rawPath.startsWith("/api/") ? rawPath.slice(4) : rawPath;
 
+    // =========================================================
+// === [BARU] PENANGANAN ROUTE OTENTIKASI (PRIORITAS TINGGI) ===
+// =========================================================
+// === [YANG BARU & BENAR] ===
+if (rawPath === '/api/auth/register' && request.method === 'POST') {
+    return handleRegister(request, env);
+}
+if (rawPath === '/api/auth/login' && request.method === 'POST') {
+    return handleLogin(request, env);
+}
+// =========================================================
+    // ==== [BARU] satu pintu foto untuk FE (prioritas paling atas) ====
+    if (rawPath.startsWith('/api/photos/')) {
+      return handlePhotoGet(request, env);
+    }
+    // (opsional, kalau mau juga layani /photos/ saat prod)
+    // if (pathname.startsWith('/photos/')) {
+    //   return handlePhotoGet(request, env);
+    // }
+
     const { accountId, userId } = getIdentity(request);
     const db = env.DB;
     const r2 = env.R2;
 
     try {
+      // ==== DEV: seeding alerts untuk demo CLI ====
+      if (pathname === '/dev/seed-alerts' && request.method === 'POST') {
+        if (env?.DISABLE_DEV_SEED === 'true') {
+          return json({ ok: false, error: 'Dev seed disabled' }, 403, env, request);
+        }
+        const table = (url.searchParams.get('table') || 'alerts').toLowerCase();
+        if (table !== 'alerts') {
+          return json({ ok: false, error: `Unsupported table: ${table}` }, 400, env, request);
+        }
+
+        let bodyPayload = null;
+        const ct = request.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          try {
+            bodyPayload = await request.json();
+          } catch {
+            bodyPayload = null;
+          }
+        }
+
+        const fallback = Array.isArray(alertsFixture?.alerts)
+          ? alertsFixture.alerts
+          : Array.isArray(alertsFixture)
+            ? alertsFixture
+            : [];
+        const candidate =
+          Array.isArray(bodyPayload?.alerts)
+            ? bodyPayload.alerts
+            : Array.isArray(bodyPayload)
+              ? bodyPayload
+              : fallback;
+
+        const inserted = await seedAlertsFromFixtures(db, candidate, accountId, userId);
+        return json({ ok: true, table, inserted }, 200, env, request);
+      }
+
       // ===== R2 STREAM DEV =====
       if (rawPath.startsWith("/r2/") && request.method === "GET") {
         return handleR2Stream(request, env);
       }
 
-      // ===== PHOTOS (satu pintu FE) =====
+      // ===== PHOTOS (versi lama) =====
+      // Biarkan tetap ada, tapi /api/photos/ di atas sudah menangkap duluan.
       if (pathname.startsWith("/photos/") && request.method === "GET") {
         const key = decodeURIComponent(pathname.replace(/^\/photos\//, ""));
         if (!key) return json({ error: "Missing key" }, 400, env, request);
@@ -35,7 +95,41 @@ export default {
         return new Response(obj.body, { status: 200, headers });
       }
 
+      // ===== WEATHER ADVICE (BMKG backbone) =====
+      if (pathname.startsWith("/weather/advice") && request.method === "GET") {
+        const lat = parseFloat(url.searchParams.get("lat") || "0");
+        const lon = parseFloat(url.searchParams.get("lon") || "0");
+        const date = url.searchParams.get("date") || new Date().toISOString().slice(0, 10);
+        const kv = env.KV;
+
+        const q = (n) => Math.round(n * 100) / 100; // ~1km
+        const key = `weather:advice:${date}:${q(lat)}:${q(lon)}`;
+
+        if (kv) {
+          const cached = await kv.get(key, { type: "json" });
+          if (cached) {
+            return json({ ...cached, cached: true }, 200, env, request, { 'Cache-Control': 'public, max-age=300' });
+          }
+        }
+
+        const data = await getWeatherAdviceBMKG(lat, lon).catch(() => null);
+        const payload = data || buildHeuristicAdvice(lat, lon);
+
+        if (kv) {
+          await kv.put(key, JSON.stringify(payload), { expirationTtl: 3 * 60 * 60 });
+        }
+        return json(payload, 200, env, request, { 'Cache-Control': 'public, max-age=300' });
+      }
+
+      // ===== NOTIF (demo) =====
+      if (pathname === "/notif/demo" && request.method === "GET") {
+        const kv = env.KV;
+        const val = kv ? await kv.get("notif:demo", { type: "json" }) : null;
+        return json({ ok: true, value: val }, 200, env, request);
+      }
+
       // ===== HEALTH =====
+      // (sudah benar di sini; tak perlu file health.js terpisah)
       if (pathname === "/health") {
         return json({ ok: true, ts: new Date().toISOString() }, 200, env, request);
       }
@@ -78,7 +172,6 @@ export default {
               for (const [k, v] of form.entries()) {
                 if (v instanceof File) {
                   if (k === "photo") {
-                    // Validasi sederhana
                     const MAX = Number(env.MAX_UPLOAD_MB || 8) * 1024 * 1024;
                     if (v.size > MAX) return json({ error: `File too large (> ${env.MAX_UPLOAD_MB || 8}MB)` }, 413, env, request);
                     const okTypes = ["image/jpeg","image/png","image/webp","image/gif"];
@@ -111,11 +204,9 @@ export default {
 
             const now = new Date().toISOString();
 
-            // coordinates bisa string/objek
             let coordinates = body.coordinates ?? body.coords ?? null;
             if (typeof coordinates === "string") { try { coordinates = JSON.parse(coordinates); } catch {} }
 
-            // affected_crops bisa string/array/json
             let affected_crops = body.affected_crops ?? body.affectedCrops ?? null;
             if (typeof affected_crops === "string") { try { affected_crops = JSON.parse(affected_crops); } catch {} }
 
@@ -138,7 +229,7 @@ export default {
               pest_count,
             };
 
-            // Insert dengan fallback (kalau kolom photo_key belum ada)
+            // Insert dengan fallback
             try {
               await db
                 .prepare(
@@ -407,18 +498,14 @@ const getIdentity = (request) => ({
   userId: request.headers.get("X-User-Id") || "demo",
 });
 
-// pilih origin yang cocok dari daftar ALLOWED_ORIGIN
 const pickAllowedOrigin = (env, request) => {
   const configured = (env.ALLOWED_ORIGIN || "*").trim();
   const reqOrigin = request.headers.get("Origin") || "";
   if (configured === "*") return "*";
-  // dukung banyak origin: "http://a:3000,http://b:4000"
   const list = configured.split(",").map(s => s.trim()).filter(Boolean);
   if (reqOrigin && list.includes(reqOrigin)) return reqOrigin;
-  // toleransi untuk localhost dengan port berbeda jika user menulis "http://localhost"
   if (reqOrigin && list.includes("http://localhost") && reqOrigin.startsWith("http://localhost")) return reqOrigin;
   if (reqOrigin && list.includes("https://localhost") && reqOrigin.startsWith("https://localhost")) return reqOrigin;
-  // fallback: pakai yang pertama agar tetap ada header
   return list[0] || "*";
 };
 
@@ -496,4 +583,128 @@ function guessContentType(filename = "") {
 function sanitizeFileName(name = "") {
   const base = name.split("/").pop().split("\\").pop();
   return base.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9._-]/g, "-");
+}
+
+export async function seedAlertsFromFixtures(db, fixtures = [], accountId = 'demo', userId = 'demo') {
+  if (!db || !Array.isArray(fixtures) || !fixtures.length) return 0;
+  let inserted = 0;
+
+  for (const raw of fixtures) {
+    if (!raw || typeof raw !== 'object') continue;
+    const nowIso = new Date().toISOString();
+
+    const norm = {
+      id: raw.id || `seed_alert_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      timestamp: raw.timestamp || nowIso,
+      pest_type: raw.pest_type ?? raw.pestType ?? 'Hama',
+      severity: raw.severity ?? 'medium',
+      description: raw.description ?? '',
+      affected_crops: raw.affected_crops ?? raw.affectedCrops ?? null,
+      location: raw.location ?? raw.reporterLocation ?? null,
+      coordinates: raw.coordinates ?? raw.coords ?? null,
+      photo_name: raw.photo_name ?? raw.photoName ?? null,
+      photo_url: raw.photo_url ?? raw.photoUrl ?? null,
+      photo_key: raw.photo_key ?? raw.photoKey ?? null,
+      affected_area: raw.affected_area ?? raw.affectedArea ?? null,
+      pest_count: raw.pest_count ?? raw.pestCount ?? null,
+    };
+
+    await db
+      .prepare("DELETE FROM alerts WHERE id = ? AND account_id = ? AND user_id = ?")
+      .bind(norm.id, accountId, userId)
+      .run();
+
+    await db
+      .prepare(
+        `INSERT INTO alerts (
+          id, timestamp, pest_type, severity, description,
+          affected_crops, location, coordinates,
+          photo_name, photo_url, photo_key,
+          affected_area, pest_count,
+          account_id, user_id, created_at, created_by, updated_at, updated_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        norm.id,
+        norm.timestamp,
+        norm.pest_type,
+        norm.severity,
+        norm.description,
+        norm.affected_crops != null ? JSON.stringify(norm.affected_crops) : null,
+        norm.location,
+        norm.coordinates != null ? JSON.stringify(norm.coordinates) : null,
+        norm.photo_name,
+        norm.photo_url,
+        norm.photo_key,
+        norm.affected_area,
+        norm.pest_count,
+        accountId, userId,
+        nowIso, userId,
+        nowIso, userId
+      )
+      .run();
+
+    inserted++;
+  }
+
+  return inserted;
+}
+
+// ===== Weather (BMKG) helpers =====
+async function getWeatherAdviceBMKG(lat, lon) {
+  const controller = new AbortController();
+  const to = setTimeout(() => controller.abort('timeout'), 5000);
+  try {
+    const resp = await fetch(`https://ibnux.github.io/BMKG-importer/cuaca/501190.json`, { signal: controller.signal });
+    clearTimeout(to);
+    if (!resp.ok) throw new Error(`BMKG status ${resp.status}`);
+    const list = await resp.json();
+    const willRain = Array.isArray(list) && list.some((x) => /hujan/i.test(x.cuaca || ''));
+    const rainfall_mm = willRain ? 8 + Math.random() * 10 : Math.random() * 1.5;
+    const advice = willRain
+      ? 'Potensi hujan. Jadwalkan penyemprotan pada pagi hari atau tunda.'
+      : 'Cuaca cerah/berawan. Cocok untuk kegiatan di lapangan.';
+    return {
+      source: 'BMKG',
+      lat, lon,
+      date: new Date().toISOString().slice(0, 10),
+      summary: willRain ? 'Berpotensi hujan' : 'Cerah/berawan',
+      rainfall_mm: Math.round(rainfall_mm * 10) / 10,
+      advice,
+    };
+  } catch (e) {
+    clearTimeout(to);
+    throw e;
+  }
+}
+
+function buildHeuristicAdvice(lat, lon) {
+  const hour = new Date().getUTCHours();
+  const rainish = (hour % 5) === 0; // pseudo
+  const rainfall_mm = rainish ? 6.2 : 0.3;
+  const advice = rainish
+    ? 'Kemungkinan hujan. Pertimbangkan penjadwalan pagi/sore dan hindari jam puncak hujan.'
+    : 'Cocok untuk kegiatan penanaman/pemupukan. Tetap hidrasi dan gunakan pelindung.';
+  return {
+    source: 'BMKG-heuristic',
+    lat, lon,
+    date: new Date().toISOString().slice(0, 10),
+    summary: rainish ? 'Berpotensi hujan (heuristik)' : 'Cerah/berawan (heuristik)',
+    rainfall_mm,
+    advice,
+  };
+}
+
+// Cron
+export async function scheduled(controller, env, ctx) {
+  try {
+    const lat = -10.177;
+    const lon = 123.607;
+    const payload = await getWeatherAdviceBMKG(lat, lon).catch(() => buildHeuristicAdvice(lat, lon));
+    if (env.KV) {
+      await env.KV.put('notif:demo', JSON.stringify({ ts: new Date().toISOString(), advice: payload }), { expirationTtl: 24 * 60 * 60 });
+    }
+  } catch (e) {
+    console.log('Cron error:', e?.message || e);
+  }
 }

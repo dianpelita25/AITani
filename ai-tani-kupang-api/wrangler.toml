@@ -24,3 +24,12 @@ R2_BUCKET     = "aitaniweb-photos"
 ALLOWED_ORIGIN = "http://localhost:5173,http://localhost:4028"
 MAX_UPLOAD_MB  = "8"
 ENV_NAME       = "development"
+
+# KV for caching weather and demo notif
+[[kv_namespaces]]
+binding = "KV"
+id = "00000000000000000000000000000000" # replace in production
+preview_id = "11111111111111111111111111111111"
+
+[triggers]
+crons = ["0 5 * * *"] # 12:00 WIB daily

@@ -78,10 +78,16 @@ const CameraInterface = ({
     }, 'image/jpeg', 0.8);
   };
 
-  const handleFileSelect = (event) => {
+  const handleFileSelect = async (event) => {
     const file = event?.target?.files?.[0];
     if (file && file?.type?.startsWith('image/')) {
-      onImageCapture(file);
+      try {
+        const { compressImage } = await import('../../../ai/localDiagnosis');
+        const compressed = await compressImage(file, 0.8);
+        onImageCapture(compressed || file);
+      } catch {
+        onImageCapture(file);
+      }
     }
   };
 
@@ -137,7 +143,10 @@ const CameraInterface = ({
           />
           
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-48 h-48 border-2 border-primary/50 rounded-lg"></div>
+            <div className="relative w-48 h-48 border-2 border-primary/50 rounded-lg overflow-hidden">
+              {/* scanning line */}
+              <div className="absolute left-0 right-0 h-0.5 bg-primary/70 animate-[scan_2.2s_linear_infinite]" style={{ top: 0 }} />
+            </div>
           </div>
           
           <div className="absolute top-4 right-4">
