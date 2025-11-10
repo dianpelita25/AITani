@@ -1,4 +1,5 @@
 // src/services/api.js
+
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { toast } from 'react-hot-toast';
 
@@ -9,9 +10,27 @@ const baseUrl = `${RAW_BASE.replace(/\/+$/, '')}/api`;
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl,
-  prepareHeaders: (headers) => {
-    headers.set('X-Account-Id', localStorage.getItem('accountId') || 'demo');
-    headers.set('X-User-Id', localStorage.getItem('userId') || 'demo');
+  // 'prepareHeaders' adalah fungsi yang berjalan sebelum setiap permintaan dikirim.
+  // Ini adalah tempat yang sempurna untuk menambahkan token kita.
+  prepareHeaders: (headers, { getState }) => {
+    // 1. Ambil state 'auth' dari memori Redux.
+    // Kita coba ambil token dari Redux dulu, jika tidak ada, coba dari localStorage.
+    let token = getState().auth.token;
+    if (!token) {
+        token = localStorage.getItem('sessionToken');
+    }
+
+    // 2. Jika token ditemukan, tambahkan ke header 'Authorization'.
+    if (token) {
+      headers.set('authorization', `Bearer ${token}`);
+    }
+    
+    // Header X-User-Id dan X-Account-Id tidak lagi menjadi sumber utama identitas,
+    // tetapi kita bisa tetap mengirimkannya sebagai fallback atau untuk logging.
+    const userProfile = getState().auth.user || JSON.parse(localStorage.getItem('userProfile'));
+    headers.set('X-Account-Id', userProfile?.accountId || 'demo');
+    headers.set('X-User-Id', userProfile?.userId || 'demo');
+
     return headers;
   },
 });
@@ -24,27 +43,21 @@ const errorToastId = (args) => {
 
 const notifyApiError = (error, args) => {
   if (typeof window === 'undefined') return;
-  const offline = typeof navigator !== 'undefined' && navigator && navigator.onLine === false;
+  const offline = typeof navigator !== 'undefined' && !navigator.onLine;
   const detail = error?.data;
-  const msgFromBody =
-    typeof detail === 'string'
-      ? detail
-      : detail?.message || detail?.error || detail?.reason;
-
-  const message = offline
-    ? 'Sedang offline. Periksa koneksi lalu coba lagi.'
-    : msgFromBody || `Permintaan gagal (${error?.status || 'unknown'})`;
-
-  toast.error(message, {
-    id: errorToastId(args),
-    duration: 4500,
-  });
+  const msgFromBody = typeof detail === 'string' ? detail : detail?.message || detail?.error;
+  const message = offline ? 'Sedang offline. Periksa koneksi.' : msgFromBody || `Permintaan gagal (${error?.status || 'unknown'})`;
+  toast.error(message, { id: errorToastId(args), duration: 4500 });
 };
 
 const baseQuery = async (args, api, extraOptions) => {
   const result = await rawBaseQuery(args, api, extraOptions);
   if (result.error) {
-    notifyApiError(result.error, args);
+    // Jangan tampilkan toast untuk error 401 (Unauthorized), 
+    // karena kita akan menangani ini dengan mengarahkan pengguna ke halaman login.
+    if (result.error.status !== 401) {
+        notifyApiError(result.error, args);
+    }
   }
   return result;
 };

@@ -9,6 +9,8 @@ import CommunityAlerts from './pages/community-alerts';
 import DiagnosisResults from './pages/diagnosis-results';
 import FarmingCalendar from './pages/farming-calendar';
 import DiagnosisHistory from './pages/diagnosis-history'; // <-- LANGKAH 1: IMPORT HALAMAN BARU
+import LoginPage from './pages/login'; // <-- TAMBAHKAN BARIS INI
+import RegisterPage from './pages/register'; // <-- TAMBAHKAN BARIS INI
 
 const Routes = () => {
   return (
@@ -26,6 +28,9 @@ const Routes = () => {
         
         {/* LANGKAH 2: TAMBAHKAN RUTE BARU DI SINI */}
         <Route path="/diagnosis-history" element={<DiagnosisHistory />} />
+
+        <Route path="/login" element={<LoginPage />} /> {/* <-- TAMBAHKAN BARIS INI */}
+        <Route path="/register" element={<RegisterPage />} /> {/* <-- TAMBAHKAN BARIS INI */}
 
         <Route path="*" element={<NotFound />} />
       </RouterRoutes>

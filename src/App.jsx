@@ -1,6 +1,8 @@
 // src/App.jsx
 
 import React, { useEffect, useCallback, useState } from "react";
+import { useDispatch } from 'react-redux'; // <-- [BARU] Impor useDispatch
+import { setCredentials } from './services/authSlice'; // <-- [BARU] Impor instruksi kita
 import Routes from "./Routes";
 import { useCreateAlertMutation } from './services/alertsApi';
 import { useCreateDiagnosisMutation } from './services/diagnosisApi';
@@ -9,6 +11,7 @@ import { retryQueue } from './offline/queueService';
 import { Toaster, toast } from 'react-hot-toast';
 
 function App() {
+  const dispatch = useDispatch(); // <-- [BARU] Siapkan dispatch
   const [createAlert] = useCreateAlertMutation();
   const [createDiagnosis] = useCreateDiagnosisMutation();
   const [createEvent] = useCreateEventMutation();
@@ -18,8 +21,25 @@ function App() {
     typeof navigator === 'undefined' ? true : navigator.onLine
   );
 
+  // [BARU] Logika untuk memuat sesi login saat aplikasi pertama kali dibuka/direfresh
+  useEffect(() => {
+    const token = localStorage.getItem('sessionToken');
+    const userProfile = localStorage.getItem('userProfile');
+
+    if (token && userProfile) {
+      try {
+        const user = JSON.parse(userProfile);
+        // Jika token dan profil ada, langsung set state di Redux
+        dispatch(setCredentials({ user, token }));
+        console.log("Sesi berhasil dimuat dari localStorage.");
+      } catch (e) {
+        console.error("Gagal mem-parsing userProfile dari localStorage", e);
+      }
+    }
+  }, [dispatch]); // Jalankan ini sekali saat komponen App dimuat
+
+  // [LAMA & TETAP DIPERTAHANKAN] Logika untuk sinkronisasi antrean offline
   const apiClient = useCallback(async (request) => {
-    // ... (logika apiClient tetap sama persis)
     switch (request.type) {
         case 'createAlert': return createAlert(request.payload).unwrap();
         case 'createDiagnosis': return createDiagnosis(request.payload).unwrap();
@@ -30,10 +50,9 @@ function App() {
       }
   }, [createAlert, createDiagnosis, createEvent, updateEvent, deleteEvent]);
 
-  // --- AWAL DARI PERBAIKAN ---
+  // [LAMA & TETAP DIPERTAHANKAN] useEffect untuk menangani sinkronisasi
   useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    // Buat channel dengan nama yang sama persis
+    if (typeof window === 'undefined') return;
     const syncChannel = new BroadcastChannel('sync-channel');
 
     const sync = () => {
@@ -45,7 +64,6 @@ function App() {
         }
     };
 
-    // Dengarkan siaran dari channel
     syncChannel.onmessage = (event) => {
       if (event.data.action === 'queue-updated') {
         console.log('Menerima siaran: antrean diperbarui. Memicu sinkronisasi.');
@@ -53,28 +71,25 @@ function App() {
       }
     };
     
-    // Juga dengarkan saat kembali online, sebagai jaring pengaman
     window.addEventListener('online', sync);
-
-    // Coba sinkronisasi saat aplikasi pertama kali dimuat
     sync();
 
     return () => {
       syncChannel.close();
       window.removeEventListener('online', sync);
     };
-  }, [apiClient]); // <-- apiClient sebagai dependensi sudah benar
-  // --- AKHIR DARI PERBAIKAN ---
+  }, [apiClient]);
 
+  // [LAMA & TETAP DIPERTAHANKAN] useEffect untuk menampilkan status online/offline
   useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
+    if (typeof window === 'undefined') return;
     const updateBody = (online) => {
       setIsOnline(online);
       if (typeof document !== 'undefined') {
         document.body.classList.toggle('is-offline', !online);
       }
     };
-    updateBody(window.navigator?.onLine ?? true);
+    updateBody(navigator.onLine ?? true);
 
     const handleOnline = () => {
       updateBody(true);
@@ -108,6 +123,7 @@ function App() {
 
 export default App;
 
+// Komponen NetworkStatusPill tetap sama
 function NetworkStatusPill({ isOnline }) {
   if (isOnline) return null;
   return (

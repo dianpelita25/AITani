@@ -8,16 +8,33 @@ importers:
 
   .:
     dependencies:
+      '@tsndr/cloudflare-worker-jwt':
+        specifier: ^3.2.0
+        version: 3.2.0
+      bcryptjs:
+        specifier: ^3.0.3
+        version: 3.0.3
       hono:
         specifier: ^4.10.4
         version: 4.10.4
 
 packages:
 
+  '@tsndr/cloudflare-worker-jwt@3.2.0':
+    resolution: {integrity: sha512-y45452JzKxFDfCUHNGrdgIcrJTkYa6xtrKtCQTjKj+hjzw8dOHF9R0uGuU8WxvCCMi4sMzZ1KREnZTsTy7DsiQ==}
+
+  bcryptjs@3.0.3:
+    resolution: {integrity: sha512-GlF5wPWnSa/X5LKM1o0wz0suXIINz1iHRLvTS+sLyi7XPbe5ycmYI3DlZqVGZZtDgl4DmasFg7gOB3JYbphV5g==}
+    hasBin: true
+
   hono@4.10.4:
     resolution: {integrity: sha512-YG/fo7zlU3KwrBL5vDpWKisLYiM+nVstBQqfr7gCPbSYURnNEP9BDxEMz8KfsDR9JX0lJWDRNc6nXX31v7ZEyg==}
     engines: {node: '>=16.9.0'}
 
 snapshots:
+
+  '@tsndr/cloudflare-worker-jwt@3.2.0': {}
+
+  bcryptjs@3.0.3: {}
 
   hono@4.10.4: {}

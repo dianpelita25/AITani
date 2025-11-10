@@ -8,12 +8,15 @@ import { api } from './services/api';
 import App from "./App";
 import "./styles/tailwind.css";
 import "./styles/index.css";
+import authReducer from './services/authSlice'; // <-- 1. TAMBAHKAN IMPORT INI
 
 
 console.log("Aplikasi Konfigurasi: Membuat Redux store."); // <-- PENANDA 2
 const store = configureStore({
   reducer: {
     [api.reducerPath]: api.reducer,
+        auth: authReducer, // <-- 2. TAMBAHKAN REDUCER BARU DI SINI
+
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(api.middleware),
