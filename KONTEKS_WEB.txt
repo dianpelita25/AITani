@@ -1,7 +1,7 @@
 --- AWAL DARI SNAPSHOT KODE PROYEK WEB ---
 
 Proyek: ai_tani_kupang Tallwind - Copy
-Dibuat pada: Sun Nov 09 2025 19:52:15 GMT+0800 (Singapore Standard Time)
+Dibuat pada: Tue Nov 11 2025 01:21:35 GMT+0800 (Singapore Standard Time)
 
 ================================================================================
 STRUKTUR FILE & KONTEN
@@ -580,6 +580,8 @@ Disallow:
 // src/App.jsx
 
 import React, { useEffect, useCallback, useState } from "react";
+import { useDispatch } from 'react-redux'; // <-- [BARU] Impor useDispatch
+import { setCredentials } from './services/authSlice'; // <-- [BARU] Impor instruksi kita
 import Routes from "./Routes";
 import { useCreateAlertMutation } from './services/alertsApi';
 import { useCreateDiagnosisMutation } from './services/diagnosisApi';
@@ -588,6 +590,7 @@ import { retryQueue } from './offline/queueService';
 import { Toaster, toast } from 'react-hot-toast';
 
 function App() {
+  const dispatch = useDispatch(); // <-- [BARU] Siapkan dispatch
   const [createAlert] = useCreateAlertMutation();
   const [createDiagnosis] = useCreateDiagnosisMutation();
   const [createEvent] = useCreateEventMutation();
@@ -597,8 +600,25 @@ function App() {
     typeof navigator === 'undefined' ? true : navigator.onLine
   );
 
+  // [BARU] Logika untuk memuat sesi login saat aplikasi pertama kali dibuka/direfresh
+  useEffect(() => {
+    const token = localStorage.getItem('sessionToken');
+    const userProfile = localStorage.getItem('userProfile');
+
+    if (token && userProfile) {
+      try {
+        const user = JSON.parse(userProfile);
+        // Jika token dan profil ada, langsung set state di Redux
+        dispatch(setCredentials({ user, token }));
+        console.log("Sesi berhasil dimuat dari localStorage.");
+      } catch (e) {
+        console.error("Gagal mem-parsing userProfile dari localStorage", e);
+      }
+    }
+  }, [dispatch]); // Jalankan ini sekali saat komponen App dimuat
+
+  // [LAMA & TETAP DIPERTAHANKAN] Logika untuk sinkronisasi antrean offline
   const apiClient = useCallback(async (request) => {
-    // ... (logika apiClient tetap sama persis)
     switch (request.type) {
         case 'createAlert': return createAlert(request.payload).unwrap();
         case 'createDiagnosis': return createDiagnosis(request.payload).unwrap();
@@ -609,10 +629,9 @@ function App() {
       }
   }, [createAlert, createDiagnosis, createEvent, updateEvent, deleteEvent]);
 
-  // --- AWAL DARI PERBAIKAN ---
+  // [LAMA & TETAP DIPERTAHANKAN] useEffect untuk menangani sinkronisasi
   useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    // Buat channel dengan nama yang sama persis
+    if (typeof window === 'undefined') return;
     const syncChannel = new BroadcastChannel('sync-channel');
 
     const sync = () => {
@@ -624,7 +643,6 @@ function App() {
         }
     };
 
-    // Dengarkan siaran dari channel
     syncChannel.onmessage = (event) => {
       if (event.data.action === 'queue-updated') {
         console.log('Menerima siaran: antrean diperbarui. Memicu sinkronisasi.');
@@ -632,28 +650,25 @@ function App() {
       }
     };
     
-    // Juga dengarkan saat kembali online, sebagai jaring pengaman
     window.addEventListener('online', sync);
-
-    // Coba sinkronisasi saat aplikasi pertama kali dimuat
     sync();
 
     return () => {
       syncChannel.close();
       window.removeEventListener('online', sync);
     };
-  }, [apiClient]); // <-- apiClient sebagai dependensi sudah benar
-  // --- AKHIR DARI PERBAIKAN ---
+  }, [apiClient]);
 
+  // [LAMA & TETAP DIPERTAHANKAN] useEffect untuk menampilkan status online/offline
   useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
+    if (typeof window === 'undefined') return;
     const updateBody = (online) => {
       setIsOnline(online);
       if (typeof document !== 'undefined') {
         document.body.classList.toggle('is-offline', !online);
       }
     };
-    updateBody(window.navigator?.onLine ?? true);
+    updateBody(navigator.onLine ?? true);
 
     const handleOnline = () => {
       updateBody(true);
@@ -687,6 +702,7 @@ function App() {
 
 export default App;
 
+// Komponen NetworkStatusPill tetap sama
 function NetworkStatusPill({ isOnline }) {
   if (isOnline) return null;
   return (
@@ -695,7 +711,6 @@ function NetworkStatusPill({ isOnline }) {
     </div>
   );
 }
-
 
 
 --- File: ./src/Routes.jsx ---
@@ -711,6 +726,8 @@ import CommunityAlerts from './pages/community-alerts';
 import DiagnosisResults from './pages/diagnosis-results';
 import FarmingCalendar from './pages/farming-calendar';
 import DiagnosisHistory from './pages/diagnosis-history'; // <-- LANGKAH 1: IMPORT HALAMAN BARU
+import LoginPage from './pages/login'; // <-- TAMBAHKAN BARIS INI
+import RegisterPage from './pages/register'; // <-- TAMBAHKAN BARIS INI
 
 const Routes = () => {
   return (
@@ -728,6 +745,9 @@ const Routes = () => {
         
         {/* LANGKAH 2: TAMBAHKAN RUTE BARU DI SINI */}
         <Route path="/diagnosis-history" element={<DiagnosisHistory />} />
+
+        <Route path="/login" element={<LoginPage />} /> {/* <-- TAMBAHKAN BARIS INI */}
+        <Route path="/register" element={<RegisterPage />} /> {/* <-- TAMBAHKAN BARIS INI */}
 
         <Route path="*" element={<NotFound />} />
       </RouterRoutes>
@@ -2359,12 +2379,15 @@ import { api } from './services/api';
 import App from "./App";
 import "./styles/tailwind.css";
 import "./styles/index.css";
+import authReducer from './services/authSlice'; // <-- 1. TAMBAHKAN IMPORT INI
 
 
 console.log("Aplikasi Konfigurasi: Membuat Redux store."); // <-- PENANDA 2
 const store = configureStore({
   reducer: {
     [api.reducerPath]: api.reducer,
+        auth: authReducer, // <-- 2. TAMBAHKAN REDUCER BARU DI SINI
+
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(api.middleware),
@@ -7099,21 +7122,39 @@ export default QuickActions;
 
 --- File: ./src/pages/home-dashboard/components/WelcomeHeader.jsx ---
 
+// src/pages/home-dashboard/components/WelcomeHeader.jsx
+
 import React from 'react';
+import { useSelector, useDispatch } from 'react-redux'; // <-- 1. Impor 'useDispatch'
+import { useNavigate } from 'react-router-dom'; // <-- 2. Impor 'useNavigate'
+import { selectCurrentUser, logOut } from '../../../services/authSlice'; // <-- 3. Impor instruksi 'logOut'
 import Icon from '../../../components/AppIcon';
+import Button from '../../../components/ui/Button'; // <-- 4. Impor komponen 'Button'
 
 const WelcomeHeader = ({ className = '' }) => {
-  // Mock user data
-  const userData = {
-    name: "Bapak Yosef",
+  const currentUser = useSelector(selectCurrentUser);
+  const dispatch = useDispatch(); // <-- 5. Siapkan 'dispatch'
+  const navigate = useNavigate(); // <-- 6. Siapkan 'navigate'
+
+  // Fungsi yang akan dijalankan saat tombol logout diklik
+  const handleLogout = () => {
+    dispatch(logOut()); // <-- 7. Jalankan instruksi 'logOut' dari authSlice
+    navigate('/login'); // <-- 8. Arahkan pengguna kembali ke halaman login
+  };
+  
+  // Data statis yang belum ada di profil pengguna, kita biarkan sebagai mock.
+  const mockData = {
     location: "Desa Oesao, Kupang",
-    lastActivity: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
+    lastActivity: new Date(Date.now() - 3 * 60 * 60 * 1000),
     totalFields: 3,
     activeCrops: 2
   };
+  
+  const displayName = currentUser?.fullName || currentUser?.email || "Pengguna";
 
   const getCurrentGreeting = () => {
-    const hour = new Date()?.getHours();
+    // ... (fungsi ini tetap sama persis)
+    const hour = new Date().getHours();
     if (hour < 12) return "Selamat Pagi";
     if (hour < 15) return "Selamat Siang";
     if (hour < 18) return "Selamat Sore";
@@ -7121,18 +7162,14 @@ const WelcomeHeader = ({ className = '' }) => {
   };
 
   const formatLastActivity = (timestamp) => {
+    // ... (fungsi ini tetap sama persis)
     const now = new Date();
     const diff = now - timestamp;
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-    if (days > 0) {
-      return `${days} hari yang lalu`;
-    } else if (hours > 0) {
-      return `${hours} jam yang lalu`;
-    } else {
-      return 'Baru saja aktif';
-    }
+    if (days > 0) return `${days} hari yang lalu`;
+    if (hours > 0) return `${hours} jam yang lalu`;
+    return 'Baru saja aktif';
   };
 
   return (
@@ -7141,65 +7178,63 @@ const WelcomeHeader = ({ className = '' }) => {
         <div className="flex-1">
           {/* Greeting */}
           <div className="mb-4">
-            <h1 className="text-2xl font-bold text-foreground mb-1">
-              {getCurrentGreeting()}, {userData?.name}! 🌱
-            </h1>
+            {/* 9. Tambahkan tombol Logout di samping sapaan */}
+            <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-bold text-foreground mb-1">
+                    {getCurrentGreeting()}, {displayName}! 🌱
+                </h1>
+                <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleLogout} 
+                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    title="Keluar"
+                >
+                    <Icon name="LogOut" size={18} />
+                </Button>
+            </div>
             <p className="text-sm text-muted-foreground">
               Semoga hari ini membawa hasil panen yang melimpah
             </p>
           </div>
 
+          {/* Sisa dari komponen tetap sama persis */}
           {/* Location & Activity */}
           <div className="space-y-2">
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <Icon name="MapPin" size={16} />
-              <span>{userData?.location}</span>
+              <span>{mockData.location}</span>
             </div>
-            
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <Icon name="Clock" size={16} />
-              <span>Terakhir aktif {formatLastActivity(userData?.lastActivity)}</span>
+              <span>Terakhir aktif {formatLastActivity(mockData.lastActivity)}</span>
             </div>
           </div>
-
           {/* Quick Stats */}
           <div className="flex items-center space-x-6 mt-4 pt-4 border-t border-border/50">
+            {/* ... sisa Quick Stats ... */}
             <div className="text-center">
-              <div className="text-lg font-semibold text-foreground">
-                {userData?.totalFields}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Lahan
-              </div>
+              <div className="text-lg font-semibold text-foreground">{mockData.totalFields}</div>
+              <div className="text-xs text-muted-foreground">Lahan</div>
             </div>
-            
             <div className="text-center">
-              <div className="text-lg font-semibold text-foreground">
-                {userData?.activeCrops}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Tanaman Aktif
-              </div>
+              <div className="text-lg font-semibold text-foreground">{mockData.activeCrops}</div>
+              <div className="text-xs text-muted-foreground">Tanaman Aktif</div>
             </div>
-            
             <div className="text-center">
-              <div className="text-lg font-semibold text-success">
-                Baik
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Status Lahan
-              </div>
+              <div className="text-lg font-semibold text-success">Baik</div>
+              <div className="text-xs text-muted-foreground">Status Lahan</div>
             </div>
           </div>
         </div>
-
         {/* Weather Widget */}
         <div className="flex-shrink-0 ml-4">
-          <div className="bg-card/50 backdrop-blur-sm rounded-xl p-4 text-center min-w-[80px]">
-            <Icon name="Sun" size={32} className="text-warning mx-auto mb-2" />
-            <div className="text-lg font-semibold text-foreground">32°</div>
-            <div className="text-xs text-muted-foreground">Cerah</div>
-          </div>
+            {/* ... sisa Weather Widget ... */}
+            <div className="bg-card/50 backdrop-blur-sm rounded-xl p-4 text-center min-w-[80px]">
+              <Icon name="Sun" size={32} className="text-warning mx-auto mb-2" />
+              <div className="text-lg font-semibold text-foreground">32°</div>
+              <div className="text-xs text-muted-foreground">Cerah</div>
+            </div>
         </div>
       </div>
     </div>
@@ -7490,6 +7525,99 @@ export default function HomeDashboard() {
   );
 }
 
+
+
+--- File: ./src/pages/login/index.jsx ---
+
+// src/pages/login/index.jsx
+
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux'; // <-- 1. Impor useDispatch
+import { setCredentials } from '../../services/authSlice'; // <-- 2. Impor "instruksi" kita
+import Icon from '../../components/AppIcon';
+import Button from '../../components/ui/Button';
+import Input from '../../components/ui/Input';
+import { useLoginMutation } from '../../services/authApi'; 
+
+const LoginPage = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
+  const dispatch = useDispatch(); // <-- 3. Siapkan alat untuk "menekan tombol"
+
+  const [login, { isLoading }] = useLoginMutation();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+
+    try {
+      const result = await login({ email, password }).unwrap();
+      
+      // 4. SETELAH LOGIN BERHASIL, "TEKAN TOMBOL" setCredentials
+      // Kirim data user dan token yang kita dapat dari API.
+      dispatch(setCredentials({ user: result.user, token: result.token }));
+      
+      // Arahkan pengguna ke halaman utama
+      navigate('/home-dashboard');
+
+    } catch (err) {
+      const errorMessage = err.data?.error || 'Terjadi kesalahan. Silakan coba lagi.';
+      setError(errorMessage);
+    }
+  };
+
+  // ... (sisa kode JSX untuk tampilan form tetap sama persis)
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <Icon name="Leaf" size={48} className="text-primary mx-auto mb-4" />
+          <h1 className="text-3xl font-bold text-foreground">Selamat Datang Kembali</h1>
+          <p className="text-muted-foreground">Silakan masuk ke akun AI Tani Kupang Anda.</p>
+        </div>
+
+        <div className="bg-card p-8 rounded-2xl border border-border shadow-lg">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Input
+              label="Alamat Email" id="email" type="email" placeholder="contoh@email.com"
+              value={email} onChange={(e) => setEmail(e.target.value)}
+              required disabled={isLoading}
+            />
+            <Input
+              label="Password" id="password" type="password" placeholder="••••••••"
+              value={password} onChange={(e) => setPassword(e.target.value)}
+              required disabled={isLoading}
+            />
+
+            {error && (
+              <div className="text-sm text-center text-destructive bg-destructive/10 p-3 rounded-md">
+                {error}
+              </div>
+            )}
+
+            <Button type="submit" fullWidth loading={isLoading} iconName="LogIn" iconPosition="left" disabled={isLoading}>
+              {isLoading ? 'Memverifikasi...' : 'Masuk'}
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              Belum punya akun?{' '}
+              <span onClick={() => navigate('/register')} className="font-semibold text-primary hover:underline cursor-pointer">
+                Daftar di sini
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default LoginPage;
 
 
 --- File: ./src/pages/photo-diagnosis/components/CameraInterface.jsx ---
@@ -8474,6 +8602,110 @@ export default PhotoDiagnosis;
 
 
 
+--- File: ./src/pages/register/index.jsx ---
+
+// src/pages/register/index.jsx
+
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Icon from '../../components/AppIcon';
+import Button from '../../components/ui/Button';
+import Input from '../../components/ui/Input';
+// BARU: Impor hook registrasi
+import { useRegisterMutation } from '../../services/authApi';
+
+const RegisterPage = () => {
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
+
+  // BARU: Panggil hook useRegisterMutation
+  const [register, { isLoading }] = useRegisterMutation();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+
+    if (password.length < 6) {
+        setError('Password minimal harus 6 karakter.');
+        return;
+    }
+
+    try {
+      // BARU: Panggil fungsi 'register' dengan data dari form
+      await register({ fullName, email, password }).unwrap();
+      
+      // Jika berhasil, beri tahu pengguna dan arahkan ke halaman login
+      alert('Registrasi berhasil! Silakan masuk dengan akun baru Anda.');
+      navigate('/login');
+
+    } catch (err) {
+      // BARU: Tangani error dari API
+      const errorMessage = err.data?.error || 'Terjadi kesalahan saat registrasi.';
+      setError(errorMessage);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <Icon name="Leaf" size={48} className="text-primary mx-auto mb-4" />
+          <h1 className="text-3xl font-bold text-foreground">Buat Akun Baru</h1>
+          <p className="text-muted-foreground">Bergabunglah dengan komunitas AI Tani Kupang.</p>
+        </div>
+
+        <div className="bg-card p-8 rounded-2xl border border-border shadow-lg">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Input
+              label="Nama Lengkap" id="fullName" type="text" placeholder="Contoh: Bapak Yosef"
+              value={fullName} onChange={(e) => setFullName(e.target.value)}
+              required disabled={isLoading}
+            />
+            <Input
+              label="Alamat Email" id="email" type="email" placeholder="contoh@email.com"
+              value={email} onChange={(e) => setEmail(e.target.value)}
+              required disabled={isLoading}
+            />
+            <Input
+              label="Password" id="password" type="password" placeholder="Minimal 6 karakter"
+              value={password} onChange={(e) => setPassword(e.target.value)}
+              required disabled={isLoading}
+            />
+
+            {error && (
+              <div className="text-sm text-center text-destructive bg-destructive/10 p-3 rounded-md">
+                {error}
+              </div>
+            )}
+
+            <Button
+              type="submit" fullWidth loading={isLoading} iconName="UserPlus" iconPosition="left"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Mendaftarkan...' : 'Daftar'}
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              Sudah punya akun?{' '}
+              <span onClick={() => navigate('/login')} className="font-semibold text-primary hover:underline cursor-pointer">
+                Masuk di sini
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default RegisterPage;
+
+
 --- File: ./src/services/alertsApi.js ---
 
 // src/services/alertsApi.js
@@ -8575,6 +8807,7 @@ export const { useGetAlertsQuery, useCreateAlertMutation } = alertsApi;
 --- File: ./src/services/api.js ---
 
 // src/services/api.js
+
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { toast } from 'react-hot-toast';
 
@@ -8585,9 +8818,27 @@ const baseUrl = `${RAW_BASE.replace(/\/+$/, '')}/api`;
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl,
-  prepareHeaders: (headers) => {
-    headers.set('X-Account-Id', localStorage.getItem('accountId') || 'demo');
-    headers.set('X-User-Id', localStorage.getItem('userId') || 'demo');
+  // 'prepareHeaders' adalah fungsi yang berjalan sebelum setiap permintaan dikirim.
+  // Ini adalah tempat yang sempurna untuk menambahkan token kita.
+  prepareHeaders: (headers, { getState }) => {
+    // 1. Ambil state 'auth' dari memori Redux.
+    // Kita coba ambil token dari Redux dulu, jika tidak ada, coba dari localStorage.
+    let token = getState().auth.token;
+    if (!token) {
+        token = localStorage.getItem('sessionToken');
+    }
+
+    // 2. Jika token ditemukan, tambahkan ke header 'Authorization'.
+    if (token) {
+      headers.set('authorization', `Bearer ${token}`);
+    }
+    
+    // Header X-User-Id dan X-Account-Id tidak lagi menjadi sumber utama identitas,
+    // tetapi kita bisa tetap mengirimkannya sebagai fallback atau untuk logging.
+    const userProfile = getState().auth.user || JSON.parse(localStorage.getItem('userProfile'));
+    headers.set('X-Account-Id', userProfile?.accountId || 'demo');
+    headers.set('X-User-Id', userProfile?.userId || 'demo');
+
     return headers;
   },
 });
@@ -8600,27 +8851,21 @@ const errorToastId = (args) => {
 
 const notifyApiError = (error, args) => {
   if (typeof window === 'undefined') return;
-  const offline = typeof navigator !== 'undefined' && navigator && navigator.onLine === false;
+  const offline = typeof navigator !== 'undefined' && !navigator.onLine;
   const detail = error?.data;
-  const msgFromBody =
-    typeof detail === 'string'
-      ? detail
-      : detail?.message || detail?.error || detail?.reason;
-
-  const message = offline
-    ? 'Sedang offline. Periksa koneksi lalu coba lagi.'
-    : msgFromBody || `Permintaan gagal (${error?.status || 'unknown'})`;
-
-  toast.error(message, {
-    id: errorToastId(args),
-    duration: 4500,
-  });
+  const msgFromBody = typeof detail === 'string' ? detail : detail?.message || detail?.error;
+  const message = offline ? 'Sedang offline. Periksa koneksi.' : msgFromBody || `Permintaan gagal (${error?.status || 'unknown'})`;
+  toast.error(message, { id: errorToastId(args), duration: 4500 });
 };
 
 const baseQuery = async (args, api, extraOptions) => {
   const result = await rawBaseQuery(args, api, extraOptions);
   if (result.error) {
-    notifyApiError(result.error, args);
+    // Jangan tampilkan toast untuk error 401 (Unauthorized), 
+    // karena kita akan menangani ini dengan mengarahkan pengguna ke halaman login.
+    if (result.error.status !== 401) {
+        notifyApiError(result.error, args);
+    }
   }
   return result;
 };
@@ -8632,6 +8877,94 @@ export const api = createApi({
   endpoints: () => ({}),
 });
 
+
+--- File: ./src/services/authApi.js ---
+
+// src/services/authApi.js
+
+import { api } from './api';
+
+export const authApi = api.injectEndpoints({
+  endpoints: (builder) => ({
+    // Endpoint untuk 'login' (tetap sama)
+    login: builder.mutation({
+      query: (credentials) => ({
+        url: 'auth/login',
+        method: 'POST',
+        body: credentials,
+      }),
+    }),
+
+    // BARU: Definisikan endpoint untuk 'register'
+    register: builder.mutation({
+      query: (userInfo) => ({
+        url: 'auth/register',
+        method: 'POST',
+        body: userInfo, // userInfo akan berisi { fullName, email, password }
+      }),
+    }),
+  }),
+});
+
+// BARU: Ekspor hook 'useRegisterMutation' bersama dengan yang lama.
+export const { useLoginMutation, useRegisterMutation } = authApi;
+
+
+--- File: ./src/services/authSlice.js ---
+
+// src/services/authSlice.js
+
+import { createSlice } from '@reduxjs/toolkit';
+
+// Ini adalah keadaan awal saat aplikasi pertama kali dibuka.
+// Awalnya, tidak ada pengguna yang login.
+const initialState = {
+  user: null,         // Untuk menyimpan data profil pengguna (nama, email, dll.)
+  token: null,        // Untuk menyimpan Token JWT
+  isAuthenticated: false, // Penanda sederhana apakah sudah login atau belum
+};
+
+const authSlice = createSlice({
+  name: 'auth',
+  initialState,
+  // 'reducers' adalah kumpulan "instruksi" untuk mengubah state.
+  reducers: {
+    // Instruksi ini akan dijalankan saat login berhasil.
+    setCredentials: (state, action) => {
+      const { user, token } = action.payload;
+      state.user = user;
+      state.token = token;
+      state.isAuthenticated = true;
+
+      // Simpan token ke localStorage agar tidak hilang saat refresh.
+      // Ini seperti menyimpan "tiket masuk" ke dalam dompet.
+      localStorage.setItem('sessionToken', token);
+      // Simpan juga data pengguna jika perlu
+      localStorage.setItem('userProfile', JSON.stringify(user));
+    },
+
+    // Instruksi ini akan dijalankan saat logout.
+    logOut: (state) => {
+      state.user = null;
+      state.token = null;
+      state.isAuthenticated = false;
+
+      // Hapus "tiket masuk" dari dompet.
+      localStorage.removeItem('sessionToken');
+      localStorage.removeItem('userProfile');
+    },
+  },
+});
+
+// Ekspor "instruksi" agar bisa digunakan di komponen lain.
+export const { setCredentials, logOut } = authSlice.actions;
+
+// Ekspor reducer agar bisa dihubungkan ke "otak" utama Redux.
+export default authSlice.reducer;
+
+// Ekspor "selector" untuk memudahkan pengambilan data dari state.
+export const selectCurrentUser = (state) => state.auth.user;
+export const selectIsAuthenticated = (state) => state.auth.isAuthenticated;
 
 
 --- File: ./src/services/diagnosisApi.js ---

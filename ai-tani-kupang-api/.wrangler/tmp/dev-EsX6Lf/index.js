@@ -28,7 +28,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// .wrangler/tmp/bundle-7vl1ME/checked-fetch.js
+// .wrangler/tmp/bundle-9I8BHR/checked-fetch.js
 function checkURL(request, init) {
   const url = request instanceof URL ? request : new URL(
     (typeof request === "string" ? new Request(request, init) : request).url
@@ -46,7 +46,7 @@ function checkURL(request, init) {
 }
 var urls;
 var init_checked_fetch = __esm({
-  ".wrangler/tmp/bundle-7vl1ME/checked-fetch.js"() {
+  ".wrangler/tmp/bundle-9I8BHR/checked-fetch.js"() {
     urls = /* @__PURE__ */ new Set();
     __name(checkURL, "checkURL");
     globalThis.fetch = new Proxy(globalThis.fetch, {
@@ -82,11 +82,11 @@ var require_crypto = __commonJS({
   }
 });
 
-// .wrangler/tmp/bundle-7vl1ME/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-9I8BHR/middleware-loader.entry.ts
 init_checked_fetch();
 init_modules_watch_stub();
 
-// .wrangler/tmp/bundle-7vl1ME/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-9I8BHR/middleware-insertion-facade.js
 init_checked_fetch();
 init_modules_watch_stub();
 
@@ -3786,6 +3786,53 @@ async function handleLogin(c) {
   }
 }
 __name(handleLogin, "handleLogin");
+async function handleForgotPassword(c) {
+  const request = c.req.raw;
+  const env = c.env;
+  try {
+    const { email } = await request.json();
+    if (!email) {
+      return new Response(JSON.stringify({ success: false, error: "Email diperlukan." }), { status: 400, headers: { "Content-Type": "application/json" } });
+    }
+    const user = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(email).first();
+    if (!user) {
+      console.log(`Permintaan reset password untuk email tidak terdaftar: ${email}`);
+      return new Response(JSON.stringify({ success: true, message: "Jika email terdaftar, instruksi reset akan dikirim." }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    const resetToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1e3);
+    await env.DB.prepare(
+      "INSERT INTO password_reset_tokens (token, user_id, expires_at) VALUES (?, ?, ?)"
+    ).bind(resetToken, user.id, expiresAt.toISOString()).run();
+    const resetUrl = `http://localhost:4028/reset-password?token=${resetToken}`;
+    const emailPayload = {
+      from: "onboarding@resend.dev",
+      to: email,
+      subject: "Instruksi Reset Password Ai Tani Kupang",
+      html: `<h1>Reset Password Anda</h1><p>Klik tautan di bawah ini untuk mereset password Anda. Tautan ini akan kedaluwarsa dalam 1 jam.</p><a href="${resetUrl}" target="_blank">Reset Password Saya</a><p>Jika Anda tidak merasa meminta ini, abaikan saja email ini.</p>`
+    };
+    console.log("Mencoba mengirim email. Menggunakan Resend API Key:", env.RESEND_API_KEY);
+    const resendResponse = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(emailPayload)
+    });
+    if (!resendResponse.ok) {
+      const errorBody = await resendResponse.json();
+      console.error("Gagal mengirim email via Resend:", errorBody);
+      throw new Error("Gagal mengirim email instruksi.");
+    }
+    console.log(`Email reset password berhasil dikirim ke: ${email}`);
+    return new Response(JSON.stringify({ success: true, message: "Jika email terdaftar, instruksi reset akan dikirim." }), { status: 200, headers: { "Content-Type": "application/json" } });
+  } catch (err) {
+    console.error("Forgot Password Gagal:", err);
+    return new Response(JSON.stringify({ success: false, error: "Gagal memproses permintaan." }), { status: 500, headers: { "Content-Type": "application/json" } });
+  }
+}
+__name(handleForgotPassword, "handleForgotPassword");
 
 // src/routes/photos.js
 init_checked_fetch();
@@ -4380,6 +4427,7 @@ var authMiddleware = /* @__PURE__ */ __name(async (c, next) => {
 }, "authMiddleware");
 app.post("/auth/register", handleRegister);
 app.post("/auth/login", handleLogin);
+app.post("/auth/forgot-password", handleForgotPassword);
 app.get("/health", (c) => json({ ok: true, ts: (/* @__PURE__ */ new Date()).toISOString() }, 200, c.env, c.req.raw));
 app.get("/alerts", authMiddleware, handleGetAlerts);
 app.post("/alerts", authMiddleware, handleCreateAlert);
@@ -4475,7 +4523,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-7vl1ME/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-9I8BHR/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -4509,7 +4557,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-7vl1ME/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-9I8BHR/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;
