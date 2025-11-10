@@ -11,6 +11,9 @@ import FarmingCalendar from './pages/farming-calendar';
 import DiagnosisHistory from './pages/diagnosis-history'; // <-- LANGKAH 1: IMPORT HALAMAN BARU
 import LoginPage from './pages/login'; // <-- TAMBAHKAN BARIS INI
 import RegisterPage from './pages/register'; // <-- TAMBAHKAN BARIS INI
+import ForgotPasswordPage from './pages/forgot-password'; // <-- Tambahkan ini
+import ResetPasswordPage from './pages/reset-password'; // <-- TAMBAHKAN INI
+
 
 const Routes = () => {
   return (
@@ -31,6 +34,9 @@ const Routes = () => {
 
         <Route path="/login" element={<LoginPage />} /> {/* <-- TAMBAHKAN BARIS INI */}
         <Route path="/register" element={<RegisterPage />} /> {/* <-- TAMBAHKAN BARIS INI */}
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} /> {/* <-- Tambahkan ini */}
+              <Route path="/reset-password" element={<ResetPasswordPage />} /> {/* <-- TAMBAHKAN INI */}
+
 
         <Route path="*" element={<NotFound />} />
       </RouterRoutes>

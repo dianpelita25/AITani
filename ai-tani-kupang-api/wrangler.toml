@@ -28,7 +28,7 @@ ENV_NAME       = "development"
 # KV for caching weather and demo notif
 [[kv_namespaces]]
 binding = "KV"
-id = "00000000000000000000000000000000" # replace in production
+id = "eeb61f85e4aa469e88e4a669b4cb403c" # replace in production
 preview_id = "11111111111111111111111111111111"
 
 [triggers]

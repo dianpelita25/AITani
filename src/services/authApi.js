@@ -13,16 +13,39 @@ export const authApi = api.injectEndpoints({
       }),
     }),
 
-    // BARU: Definisikan endpoint untuk 'register'
+    // Endpoint untuk 'register' (tetap sama)
     register: builder.mutation({
       query: (userInfo) => ({
         url: 'auth/register',
         method: 'POST',
-        body: userInfo, // userInfo akan berisi { fullName, email, password }
+        body: userInfo,
+      }),
+    }),
+
+    // BARU: Endpoint untuk meminta link reset password
+    forgotPassword: builder.mutation({
+      query: ({ email }) => ({
+        url: 'auth/forgot-password',
+        method: 'POST',
+        body: { email },
+      }),
+    }),
+
+    // BARU: Endpoint untuk mengirim password baru beserta token reset
+    resetPassword: builder.mutation({
+      query: ({ token, password }) => ({
+        url: 'auth/reset-password',
+        method: 'POST',
+        body: { token, password },
       }),
     }),
   }),
 });
 
-// BARU: Ekspor hook 'useRegisterMutation' bersama dengan yang lama.
-export const { useLoginMutation, useRegisterMutation } = authApi;
+// BARU: Ekspor semua hook yang kita butuhkan sekarang.
+export const { 
+    useLoginMutation, 
+    useRegisterMutation, 
+    useForgotPasswordMutation, 
+    useResetPasswordMutation 
+} = authApi;

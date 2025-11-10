@@ -1,4 +1,4 @@
-// ai-tani-kupang-api/src/routes/auth.js - VERSI DIPERBARUI
+// ai-tani-kupang-api/src/routes/auth.js
 
 import bcrypt from 'bcryptjs';
 import jwt from '@tsndr/cloudflare-worker-jwt';
@@ -6,7 +6,7 @@ import jwt from '@tsndr/cloudflare-worker-jwt';
 // Handler untuk registrasi
 export async function handleRegister(c) {
   const request = c.req.raw;
-  const env = c.env; // <-- Tambahkan ini
+  const env = c.env;
 
   try {
     const body = await request.json();
@@ -37,7 +37,7 @@ export async function handleRegister(c) {
 // Handler untuk login
 export async function handleLogin(c) {
   const request = c.req.raw;
-  const env = c.env; // <-- Tambahkan ini
+  const env = c.env;
 
   try {
     const body = await request.json();
@@ -83,4 +83,68 @@ export async function handleLogin(c) {
     console.error("Login gagal:", err);
     return new Response(JSON.stringify({ success: false, error: 'Login gagal karena kesalahan server.' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
+}
+
+// Handler untuk Lupa Password
+export async function handleForgotPassword(c) {
+    const request = c.req.raw;
+    const env = c.env;
+
+    try {
+        const { email } = await request.json();
+        if (!email) {
+            return new Response(JSON.stringify({ success: false, error: 'Email diperlukan.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        const user = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first();
+
+        if (!user) {
+            console.log(`Permintaan reset password untuk email tidak terdaftar: ${email}`);
+            return new Response(JSON.stringify({ success: true, message: 'Jika email terdaftar, instruksi reset akan dikirim.' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        const resetToken = crypto.randomUUID();
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+        await env.DB.prepare(
+            'INSERT INTO password_reset_tokens (token, user_id, expires_at) VALUES (?, ?, ?)'
+        ).bind(resetToken, user.id, expiresAt.toISOString()).run();
+
+        const resetUrl = `http://localhost:4028/reset-password?token=${resetToken}`;
+        
+        const emailPayload = {
+            from: 'onboarding@resend.dev',
+            to: email,
+            subject: 'Instruksi Reset Password Ai Tani Kupang',
+            html: `<h1>Reset Password Anda</h1><p>Klik tautan di bawah ini untuk mereset password Anda. Tautan ini akan kedaluwarsa dalam 1 jam.</p><a href="${resetUrl}" target="_blank">Reset Password Saya</a><p>Jika Anda tidak merasa meminta ini, abaikan saja email ini.</p>`
+        };
+
+        // ====================================================================
+        // === [BARIS DEBUGGING] - Tampilkan kunci API yang digunakan ===
+        // ====================================================================
+        console.log("Mencoba mengirim email. Menggunakan Resend API Key:", env.RESEND_API_KEY);
+        // ====================================================================
+        
+        const resendResponse = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(emailPayload)
+        });
+
+        if (!resendResponse.ok) {
+            const errorBody = await resendResponse.json();
+            console.error("Gagal mengirim email via Resend:", errorBody);
+            throw new Error('Gagal mengirim email instruksi.');
+        }
+
+        console.log(`Email reset password berhasil dikirim ke: ${email}`);
+        return new Response(JSON.stringify({ success: true, message: 'Jika email terdaftar, instruksi reset akan dikirim.' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+    } catch (err) {
+        console.error("Forgot Password Gagal:", err);
+        return new Response(JSON.stringify({ success: false, error: 'Gagal memproses permintaan.' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
 }

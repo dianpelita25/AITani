@@ -12,6 +12,7 @@ import { handleGetEvents, handleCreateEvent, handleUpdateEvent, handleDeleteEven
 import { handleGetDiagnosisHistory, handleCreateDiagnosis } from './routes/diagnosis';
 import { handleGetWeatherAdvice } from './routes/weather';
 import { handleSeedAlerts } from './routes/dev';
+import { handleForgotPassword } from './routes/auth'; // <-- 1. Impor handler baru
 import { json } from './routes/utils';
 
 const app = new Hono();
@@ -49,6 +50,7 @@ const authMiddleware = async (c, next) => {
 // (Semua route tetap sama persis)
 app.post('/auth/register', handleRegister);
 app.post('/auth/login', handleLogin);
+app.post('/auth/forgot-password', handleForgotPassword); // <-- 2. Daftarkan route baru
 app.get('/health', (c) => json({ ok: true, ts: new Date().toISOString() }, 200, c.env, c.req.raw));
 app.get('/alerts', authMiddleware, handleGetAlerts);
 app.post('/alerts', authMiddleware, handleCreateAlert);
