@@ -75,10 +75,6 @@ ai_tani_kupang Tallwind - Copy
 │   │   │       │       └── 9720582e742b2d0573c56af6f4fb8eaeeff0b0843e2eaa987d9e5501564a6d80.sqlite
 │   │   │       └── workflows
 │   │   └── tmp
-│   │       ├── bundle-7vl1ME
-│   │       │   ├── checked-fetch.js
-│   │       │   ├── middleware-insertion-facade.js
-│   │       │   └── middleware-loader.entry.ts
 │   │       ├── bundle-AZDTtY
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
@@ -87,6 +83,7 @@ ai_tani_kupang Tallwind - Copy
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
 │   │       │   └── middleware-loader.entry.ts
+│   │       ├── bundle-DMx7lg
 │   │       ├── bundle-JKtFaP
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
@@ -103,6 +100,9 @@ ai_tani_kupang Tallwind - Copy
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
 │   │       │   └── middleware-loader.entry.ts
+│   │       ├── deploy-GvjIRQ
+│   │       │   ├── index.js
+│   │       │   └── index.js.map
 │   │       ├── dev-7CmjSa
 │   │       │   ├── index.js
 │   │       │   └── index.js.map
@@ -110,9 +110,6 @@ ai_tani_kupang Tallwind - Copy
 │   │       │   ├── index.js
 │   │       │   └── index.js.map
 │   │       ├── dev-ANleR5
-│   │       │   ├── index.js
-│   │       │   └── index.js.map
-│   │       ├── dev-RWtFJ3
 │   │       │   ├── index.js
 │   │       │   └── index.js.map
 │   │       ├── dev-byeFH4
@@ -126,6 +123,7 @@ ai_tani_kupang Tallwind - Copy
 │   ├── local_schema.sql
 │   ├── migrations
 │   │   ├── 0007_create_users_table.sql
+│   │   ├── 0008_create_password_resets_table.sql
 │   │   ├── 001_schema.sql
 │   │   ├── 002_align_with_remote.sql
 │   │   ├── 003_add_photo_url.sql
@@ -1043,6 +1041,8 @@ ai_tani_kupang Tallwind - Copy
 │   │   │   │   ├── EventFilterBar.jsx
 │   │   │   │   └── MobileCalendarView.jsx
 │   │   │   └── index.jsx
+│   │   ├── forgot-password
+│   │   │   └── index.jsx
 │   │   ├── home-dashboard
 │   │   │   ├── components
 │   │   │   │   ├── CommunityAlertSnippet.jsx
@@ -1058,7 +1058,9 @@ ai_tani_kupang Tallwind - Copy
 │   │   │   │   ├── DiagnosisForm.jsx
 │   │   │   │   └── DiagnosisResults.jsx
 │   │   │   └── index.jsx
-│   │   └── register
+│   │   ├── register
+│   │   │   └── index.jsx
+│   │   └── reset-password
 │   │       └── index.jsx
 │   ├── services
 │   │   ├── alertsApi.js

@@ -1,3 +1,5 @@
+// src/pages/photo-diagnosis/index.jsx
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCreateDiagnosisMutation } from '../../services/diagnosisApi';
@@ -28,8 +30,11 @@ const PhotoDiagnosis = () => {
   const [formData, setFormData] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [diagnosisResult, setDiagnosisResult] = useState(null);
+  
+  // [PERBAIKAN #1] Kita akan menggunakan state lokal untuk mengontrol loading overlay
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const [createDiagnosis, { isLoading }] = useCreateDiagnosisMutation();
+  const [createDiagnosis, { isLoading: isUploading }] = useCreateDiagnosisMutation();
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -53,25 +58,19 @@ const PhotoDiagnosis = () => {
   };
 
   const handleFormSubmit = async (data) => {
+    // [PERBAIKAN #2] Tampilkan loading overlay SEGERA
+    setIsProcessing(true);
     setFormData(data);
     const submissionData = { ...data, photo: capturedImage };
 
-    // 1) Run on-device diagnosis first for instant UX
-    try {
-      const local = await runLocalDiagnosis(capturedImage);
-      setDiagnosisResult(local);
-      setCurrentStep('results');
-    } catch (e) {
+    // Jalankan diagnosis lokal dan pengiriman ke server secara bersamaan
+    // untuk memberikan kesan responsif sambil tetap mengirim data.
+    const localDiagnosisPromise = runLocalDiagnosis(capturedImage).catch(e => {
       console.warn('Local diagnosis failed, will rely on server:', e?.message || e);
-    }
-
-    // 2) Persist to server (best-effort). Update UI if it returns richer data.
-    try {
-      const result = await createDiagnosis(submissionData).unwrap();
-      if (result?.success) {
-        setDiagnosisResult((prev) => prev || result);
-      }
-    } catch (error) {
+      return null; // Jangan sampai promise ini gagal dan menghentikan alur
+    });
+    
+    const serverDiagnosisPromise = createDiagnosis(submissionData).unwrap().catch(async (error) => {
       console.error('Gagal mengirim diagnosis, menyimpan ke antrean:', error);
       const offlinePayload = { ...submissionData };
 
@@ -84,9 +83,21 @@ const PhotoDiagnosis = () => {
           offlinePayload.photo = null;
         }
       }
-
       await enqueueRequest({ type: 'createDiagnosis', payload: offlinePayload });
-    }
+      return null; // Jangan sampai promise ini gagal
+    });
+
+    // Tunggu keduanya selesai
+    const [localResult, serverResult] = await Promise.all([localDiagnosisPromise, serverDiagnosisPromise]);
+
+    // Prioritaskan hasil dari server jika ada, jika tidak gunakan hasil lokal
+    const finalResult = serverResult?.success ? serverResult : localResult;
+    
+    setDiagnosisResult(finalResult);
+    setCurrentStep('results');
+    
+    // [PERBAIKAN #3] Sembunyikan loading overlay setelah semuanya selesai
+    setIsProcessing(false);
   };
 
   const handleStartNew = () => {
@@ -96,6 +107,7 @@ const PhotoDiagnosis = () => {
     setCurrentStep('capture');
   };
 
+  // ... (renderStepIndicator tetap sama) ...
   const renderStepIndicator = () => {
     const steps = [
       { id: 'capture', label: 'Foto', icon: 'Camera' },
@@ -145,7 +157,8 @@ const PhotoDiagnosis = () => {
       </div>
     );
   };
-
+  
+  // [PERBAIKAN #4] Gunakan isProcessing (state lokal) untuk loading di form
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 'capture':
@@ -154,11 +167,11 @@ const PhotoDiagnosis = () => {
             onImageCapture={handleImageCapture}
             capturedImage={capturedImage}
             onImageRemove={handleImageRemove}
-            isLoading={isLoading}
+            isLoading={isProcessing}
           />
         );
       case 'form':
-        return <DiagnosisForm onSubmit={handleFormSubmit} isLoading={isLoading} hasImage={!!capturedImage} />;
+        return <DiagnosisForm onSubmit={handleFormSubmit} isLoading={isProcessing} hasImage={!!capturedImage} />;
       case 'results':
         return (
           <DiagnosisResults
@@ -175,8 +188,8 @@ const PhotoDiagnosis = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* NAV DESKTOP (tanpa back) */}
-      <div className="hidden md:block">
+      {/* ... (sisa JSX tetap sama) ... */}
+            <div className="hidden md:block">
         <DesktopTopNav />
       </div>
 
@@ -235,8 +248,9 @@ const PhotoDiagnosis = () => {
           <BottomNavigation />
         </div>
       </div>
-
-      <LoadingOverlay isVisible={isLoading} message="Menganalisis foto tanaman..." animationType="camera" />
+      
+      {/* [PERBAIKAN #5] Gunakan isProcessing untuk mengontrol LoadingOverlay */}
+      <LoadingOverlay isVisible={isProcessing} message="Menganalisis foto tanaman..." animationType="camera" />
     </div>
   );
 };

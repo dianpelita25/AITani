@@ -5,20 +5,20 @@ import { cors } from 'hono/cors';
 import jwt from '@tsndr/cloudflare-worker-jwt';
 
 // Impor semua handler dari file-file terpisah
-import { handleRegister, handleLogin } from './routes/auth';
+import { handleRegister, handleLogin, handleForgotPassword, handleResetPassword } from './routes/auth';
 import { handlePhotoGet } from './routes/photos';
 import { handleGetAlerts, handleCreateAlert, handleDeleteAlert } from './routes/alerts';
 import { handleGetEvents, handleCreateEvent, handleUpdateEvent, handleDeleteEvent } from './routes/events';
 import { handleGetDiagnosisHistory, handleCreateDiagnosis } from './routes/diagnosis';
 import { handleGetWeatherAdvice } from './routes/weather';
 import { handleSeedAlerts } from './routes/dev';
-import { handleForgotPassword } from './routes/auth'; // <-- 1. Impor handler baru
 import { json } from './routes/utils';
 
 const app = new Hono();
 
 // --- Middleware ---
-// (Middleware CORS dan authMiddleware tetap sama persis)
+
+// 1. Middleware CORS (berjalan untuk semua permintaan)
 app.use('*', (c, next) => {
     const env = c.env;
     const allowedOrigins = (env.ALLOWED_ORIGIN || '*').split(',').map(o => o.trim());
@@ -29,6 +29,7 @@ app.use('*', (c, next) => {
     })(c, next);
 });
 
+// 2. Middleware Autentikasi ("Penjaga Pintu")
 const authMiddleware = async (c, next) => {
   const authHeader = c.req.header('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -47,41 +48,48 @@ const authMiddleware = async (c, next) => {
 };
 
 // --- Definisi Routes ---
-// (Semua route tetap sama persis)
+
+// A. Route Publik
 app.post('/auth/register', handleRegister);
 app.post('/auth/login', handleLogin);
-app.post('/auth/forgot-password', handleForgotPassword); // <-- 2. Daftarkan route baru
+app.post('/auth/forgot-password', handleForgotPassword);
+app.post('/auth/reset-password', handleResetPassword); // <-- Route Baru
 app.get('/health', (c) => json({ ok: true, ts: new Date().toISOString() }, 200, c.env, c.req.raw));
+
+// B. Route Terproteksi
 app.get('/alerts', authMiddleware, handleGetAlerts);
 app.post('/alerts', authMiddleware, handleCreateAlert);
 app.delete('/alerts/:id', authMiddleware, handleDeleteAlert);
+
 app.get('/events', authMiddleware, handleGetEvents);
 app.post('/events', authMiddleware, handleCreateEvent);
 app.patch('/events/:id', authMiddleware, handleUpdateEvent);
 app.delete('/events/:id', authMiddleware, handleDeleteEvent);
+
 app.get('/diagnosis', authMiddleware, handleGetDiagnosisHistory);
 app.post('/diagnosis', authMiddleware, handleCreateDiagnosis);
+
 app.get('/photos/:key+', authMiddleware, handlePhotoGet);
 app.get('/weather/advice', authMiddleware, handleGetWeatherAdvice);
+
+// C. Route Khusus Development
 app.post('/dev/seed-alerts', handleSeedAlerts);
+
 app.notFound((c) => c.json({ error: 'Not Found', path: c.req.path }, 404));
 
 
-// =========================================================
-// === [BARU] FUNGSI TERJADWAL (CRON) & HELPERNYA ===
-// =========================================================
-
-// Helper yang dibutuhkan oleh fungsi scheduled, diambil dari index.js lama
+// --- Helper untuk Fungsi Terjadwal (Cron) ---
 async function getWeatherAdviceBMKG(lat, lon) {
     const resp = await fetch(`https://ibnux.github.io/BMKG-importer/cuaca/501190.json`);
     if (!resp.ok) throw new Error(`BMKG status ${resp.status}`);
     const list = await resp.json();
     const willRain = list.some((x) => /hujan/i.test(x.cuaca || ''));
-    return { summary: willRain ? 'Berpotensi hujan' : 'Cerah/berawan' }; // Disederhanakan
+    return { summary: willRain ? 'Berpotensi hujan' : 'Cerah/berawan' };
 }
 
-// Handler utama yang diekspor untuk Cloudflare Worker
+// --- Handler Utama Worker ---
 export default {
+    // Handler untuk permintaan HTTP
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
         if (url.pathname.startsWith('/api/')) {
@@ -93,16 +101,15 @@ export default {
         return app.fetch(request, env, ctx);
     },
 
-    // Ini adalah fungsi yang akan dicari dan dijalankan oleh Cloudflare sesuai jadwal
+    // Handler untuk tugas terjadwal (Cron)
     async scheduled(controller, env, ctx) {
         console.log("Cron job is running...");
         try {
-            const lat = -10.177; // Kupang
+            const lat = -10.177;
             const lon = 123.607;
             const payload = await getWeatherAdviceBMKG(lat, lon);
             
             if (env.KV) {
-                // Simpan hasil ramalan cuaca ke KV untuk notifikasi demo
                 await env.KV.put('notif:demo', JSON.stringify({ ts: new Date().toISOString(), advice: payload }));
                 console.log("Cron job: Successfully fetched and cached weather data.");
             }
