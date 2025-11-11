@@ -83,7 +83,6 @@ ai_tani_kupang Tallwind - Copy
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
 │   │       │   └── middleware-loader.entry.ts
-│   │       ├── bundle-DMx7lg
 │   │       ├── bundle-JKtFaP
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
@@ -100,9 +99,6 @@ ai_tani_kupang Tallwind - Copy
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
 │   │       │   └── middleware-loader.entry.ts
-│   │       ├── deploy-GvjIRQ
-│   │       │   ├── index.js
-│   │       │   └── index.js.map
 │   │       ├── dev-7CmjSa
 │   │       │   ├── index.js
 │   │       │   └── index.js.map
