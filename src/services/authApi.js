@@ -22,7 +22,7 @@ export const authApi = api.injectEndpoints({
       }),
     }),
 
-    // BARU: Endpoint untuk meminta link reset password
+    // Endpoint untuk meminta link reset password
     forgotPassword: builder.mutation({
       query: ({ email }) => ({
         url: 'auth/forgot-password',
@@ -31,7 +31,7 @@ export const authApi = api.injectEndpoints({
       }),
     }),
 
-    // BARU: Endpoint untuk mengirim password baru beserta token reset
+    // Endpoint untuk mengirim password baru beserta token reset
     resetPassword: builder.mutation({
       query: ({ token, password }) => ({
         url: 'auth/reset-password',
@@ -42,7 +42,7 @@ export const authApi = api.injectEndpoints({
   }),
 });
 
-// BARU: Ekspor semua hook yang kita butuhkan sekarang.
+// Ekspor semua hook yang kita butuhkan sekarang.
 export const { 
     useLoginMutation, 
     useRegisterMutation, 

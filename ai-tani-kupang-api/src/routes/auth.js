@@ -1,4 +1,4 @@
-// ai-tani-kupang-api/src/routes/auth.js
+// src/routes/auth.js
 
 import bcrypt from 'bcryptjs';
 import jwt from '@tsndr/cloudflare-worker-jwt';
@@ -119,12 +119,6 @@ export async function handleForgotPassword(c) {
             html: `<h1>Reset Password Anda</h1><p>Klik tautan di bawah ini untuk mereset password Anda. Tautan ini akan kedaluwarsa dalam 1 jam.</p><a href="${resetUrl}" target="_blank">Reset Password Saya</a><p>Jika Anda tidak merasa meminta ini, abaikan saja email ini.</p>`
         };
 
-        // ====================================================================
-        // === [BARIS DEBUGGING] - Tampilkan kunci API yang digunakan ===
-        // ====================================================================
-        console.log("Mencoba mengirim email. Menggunakan Resend API Key:", env.RESEND_API_KEY);
-        // ====================================================================
-        
         const resendResponse = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
@@ -146,5 +140,37 @@ export async function handleForgotPassword(c) {
     } catch (err) {
         console.error("Forgot Password Gagal:", err);
         return new Response(JSON.stringify({ success: false, error: 'Gagal memproses permintaan.' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
+}
+
+// Handler untuk Reset Password
+export async function handleResetPassword(c) {
+    const request = c.req.raw;
+    const env = c.env;
+
+    try {
+        const { token, password } = await request.json();
+
+        if (!token || !password || password.length < 6) {
+            return new Response(JSON.stringify({ success: false, error: 'Token diperlukan dan password minimal 6 karakter.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        const tokenEntry = await env.DB.prepare('SELECT * FROM password_reset_tokens WHERE token = ?').bind(token).first();
+
+        if (!tokenEntry || tokenEntry.used_at !== null || new Date(tokenEntry.expires_at) < new Date()) {
+            return new Response(JSON.stringify({ success: false, error: 'Token reset tidak valid atau sudah kedaluwarsa.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        const hashedPassword = bcrypt.hashSync(password, 10);
+        const now = new Date().toISOString();
+
+        await env.DB.prepare('UPDATE users SET hashed_password = ?, updated_at = ? WHERE id = ?').bind(hashedPassword, now, tokenEntry.user_id).run();
+        await env.DB.prepare('UPDATE password_reset_tokens SET used_at = ? WHERE token = ?').bind(now, token).run();
+
+        return new Response(JSON.stringify({ success: true, message: 'Password berhasil diubah.' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+    } catch (err) {
+        console.error("Reset Password Gagal:", err);
+        return new Response(JSON.stringify({ success: false, error: 'Gagal memproses permintaan reset.' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
 }

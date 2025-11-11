@@ -1,35 +1,35 @@
-// src/pages/forgot-password/index.jsx
+// src/pages/forgot-password/index.jsx - VERSI DIPERBAIKI
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
-import { useForgotPasswordMutation } from '../../services/authApi'; // <-- Impor hook baru
+import { useForgotPasswordMutation } from '../../services/authApi';
 
 const ForgotPasswordPage = () => {
     const [email, setEmail] = React.useState('');
     const [error, setError] = React.useState(null);
     const [isSuccess, setIsSuccess] = React.useState(false);
+    // Kita tidak lagi butuh isLoading manual karena RTK Query akan menanganinya
+    // const [isLoading, setIsLoading] = React.useState(false); // INI DIHAPUS
+
     const navigate = useNavigate();
 
-    const [forgotPassword, { isLoading }] = useForgotPasswordMutation();
+    const [forgotPassword, { isLoading }] = useForgotPasswordMutation(); // isLoading didapat dari sini
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setIsLoading(true);
+        // setIsLoading(true); // Tidak perlu lagi
         setError(null);
         
         try {
             await forgotPassword({ email }).unwrap();
-            // Jika berhasil, selalu tampilkan pesan sukses
             setIsSuccess(true);
         } catch (err) {
-            // Jika API gagal total (bukan karena email tidak ditemukan), tampilkan error generik
             setError("Terjadi kesalahan. Silakan coba lagi nanti.");
-        } finally {
-            setIsLoading(false);
-        }
+        } 
+        // finally { setIsLoading(false); } // Tidak perlu lagi
     };
 
     return (
@@ -50,7 +50,7 @@ const ForgotPasswordPage = () => {
                     {isSuccess ? (
                         <div className="text-center">
                             <p className="text-foreground mb-6">
-                                Jika email yang Anda masukkan terdaftar, sebuah tautan untuk mereset password telah dikirimkan.
+                                Jika email yang Anda masukkan terdaftar, tautan telah dikirimkan.
                             </p>
                             <Button
                                 fullWidth

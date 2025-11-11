@@ -5,19 +5,20 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
-// TODO: Impor useResetPasswordMutation
+import { useResetPasswordMutation } from '../../services/authApi';
 
 const ResetPasswordPage = () => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState(null);
     const [isSuccess, setIsSuccess] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+    
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     
-    // Ambil token dari URL (?token=...)
     const token = searchParams.get('token');
+
+    const [resetPassword, { isLoading }] = useResetPasswordMutation();
 
     useEffect(() => {
         if (!token) {
@@ -25,10 +26,9 @@ const ResetPasswordPage = () => {
         }
     }, [token]);
 
-
-    // TODO: Ganti dengan logika API
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        
         if (password !== confirmPassword) {
             setError("Password dan konfirmasi password tidak cocok.");
             return;
@@ -37,17 +37,21 @@ const ResetPasswordPage = () => {
             setError("Password minimal harus 6 karakter.");
             return;
         }
+        if (!token) {
+            setError("Token tidak ditemukan. Proses reset tidak dapat dilanjutkan.");
+            return;
+        }
+        
         setError(null);
-        setIsLoading(true);
 
-        console.log("Mencoba reset password dengan token:", token);
-        console.log("Password baru:", password);
-
-        // Simulasi sukses
-        setTimeout(() => {
-            setIsLoading(false);
+        try {
+            await resetPassword({ token, password }).unwrap();
             setIsSuccess(true);
-        }, 1500);
+            
+        } catch (err) {
+            const errorMessage = err.data?.error || "Gagal mengatur password. Token mungkin sudah kedaluwarsa atau tidak valid.";
+            setError(errorMessage);
+        }
     };
 
     return (
@@ -78,22 +82,26 @@ const ResetPasswordPage = () => {
                         </div>
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-6">
+                            {error && <div className="text-sm text-center text-destructive bg-destructive/10 p-3 rounded-md">{error}</div>}
+                            
                             <Input
                                 label="Password Baru" id="password" type="password"
                                 placeholder="Minimal 6 karakter"
                                 value={password} onChange={(e) => setPassword(e.target.value)}
                                 required disabled={!token || isLoading}
+                                autoComplete="new-password"
                             />
                             <Input
                                 label="Konfirmasi Password Baru" id="confirmPassword" type="password"
                                 placeholder="Ulangi password baru Anda"
                                 value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                                 required disabled={!token || isLoading}
+                                autoComplete="new-password"
                             />
 
-                            {error && <div className="text-sm text-center text-destructive bg-destructive/10 p-3 rounded-md">{error}</div>}
-
-                            <Button type="submit" fullWidth loading={isLoading} disabled={!token || isLoading}>
+                            {/* [PERBAIKAN BUG] Nonaktifkan spinner sementara untuk menghindari error rendering SVG.
+                                Teks 'Menyimpan...' sudah cukup sebagai umpan balik. */}
+                            <Button type="submit" fullWidth loading={false} disabled={!token || isLoading} iconName="Save" iconPosition="left">
                                 {isLoading ? 'Menyimpan...' : 'Simpan Password Baru'}
                             </Button>
                         </form>
