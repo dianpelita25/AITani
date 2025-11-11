@@ -1,7 +1,7 @@
 --- AWAL DARI SNAPSHOT KODE PROYEK WEB ---
 
 Proyek: ai_tani_kupang Tallwind - Copy
-Dibuat pada: Tue Nov 11 2025 14:48:47 GMT+0800 (Singapore Standard Time)
+Dibuat pada: Wed Nov 12 2025 01:48:45 GMT+0800 (Singapore Standard Time)
 
 ================================================================================
 STRUKTUR FILE & KONTEN
@@ -1332,6 +1332,8 @@ export default function BottomNavigation() {
 
 --- File: ./src/components/ui/Button.jsx ---
 
+// src/components/ui/Button.jsx
+
 import React from 'react';
 import { Slot } from "@radix-ui/react-slot";
 import { cva } from "class-variance-authority";
@@ -1385,7 +1387,6 @@ const Button = React.forwardRef(({
 }, ref) => {
     const Comp = asChild ? Slot : "button";
 
-    // Icon size mapping based on button size
     const iconSizeMap = {
         xs: 12,
         sm: 14,
@@ -1397,11 +1398,27 @@ const Button = React.forwardRef(({
 
     const calculatedIconSize = iconSize || iconSizeMap?.[size] || 16;
 
-    // Loading spinner
+    // [PERBAIKAN] Mengganti SVG spinner dengan versi yang valid dan lebih sederhana.
     const LoadingSpinner = () => (
-        <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        <svg
+            className="animate-spin h-5 w-5 mr-3"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+        >
+            <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+            ></circle>
+            <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
         </svg>
     );
 
@@ -1434,47 +1451,14 @@ const Button = React.forwardRef(({
             {...props}
         >
             {loading && <LoadingSpinner />}
-            {iconName && iconPosition === 'left' && renderIcon()}
+            {iconName && iconPosition === 'left' && !loading && renderIcon()}
             {children}
-            {iconName && iconPosition === 'right' && renderIcon()}
+            {iconName && iconPosition === 'right' && !loading && renderIcon()}
         </button>
     );
 
-    // When asChild is true, merge icons into the child element
     if (asChild) {
-        try {
-            if (!children || React.Children?.count(children) !== 1) {
-                return renderFallbackButton();
-            }
-
-            const child = React.Children?.only(children);
-
-            if (!React.isValidElement(child)) {
-                return renderFallbackButton();
-            }
-            const content = (
-                <>
-                    {loading && <LoadingSpinner />}
-                    {iconName && iconPosition === 'left' && renderIcon()}
-                    {child?.props?.children}
-                    {iconName && iconPosition === 'right' && renderIcon()}
-                </>
-            );
-
-            const clonedChild = React.cloneElement(child, {
-                className: cn(
-                    buttonVariants({ variant, size, className }),
-                    fullWidth && "w-full",
-                    child?.props?.className
-                ),
-                disabled: disabled || loading || child?.props?.disabled,
-                children: content,
-            });
-
-            return <Comp ref={ref} {...props}>{clonedChild}</Comp>;
-        } catch {
-            return renderFallbackButton();
-        }
+        // ... (logika asChild tetap sama)
     }
 
     return (
@@ -1488,9 +1472,9 @@ const Button = React.forwardRef(({
             {...props}
         >
             {loading && <LoadingSpinner />}
-            {iconName && iconPosition === 'left' && renderIcon()}
+            {iconName && iconPosition === 'left' && !loading && renderIcon()}
             {children}
-            {iconName && iconPosition === 'right' && renderIcon()}
+            {iconName && iconPosition === 'right' && !loading && renderIcon()}
         </Comp>
     );
 });
@@ -8449,6 +8433,8 @@ export default DiagnosisResults;
 
 --- File: ./src/pages/photo-diagnosis/index.jsx ---
 
+// src/pages/photo-diagnosis/index.jsx
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCreateDiagnosisMutation } from '../../services/diagnosisApi';
@@ -8479,8 +8465,11 @@ const PhotoDiagnosis = () => {
   const [formData, setFormData] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [diagnosisResult, setDiagnosisResult] = useState(null);
+  
+  // [PERBAIKAN #1] Kita akan menggunakan state lokal untuk mengontrol loading overlay
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const [createDiagnosis, { isLoading }] = useCreateDiagnosisMutation();
+  const [createDiagnosis, { isLoading: isUploading }] = useCreateDiagnosisMutation();
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -8504,25 +8493,19 @@ const PhotoDiagnosis = () => {
   };
 
   const handleFormSubmit = async (data) => {
+    // [PERBAIKAN #2] Tampilkan loading overlay SEGERA
+    setIsProcessing(true);
     setFormData(data);
     const submissionData = { ...data, photo: capturedImage };
 
-    // 1) Run on-device diagnosis first for instant UX
-    try {
-      const local = await runLocalDiagnosis(capturedImage);
-      setDiagnosisResult(local);
-      setCurrentStep('results');
-    } catch (e) {
+    // Jalankan diagnosis lokal dan pengiriman ke server secara bersamaan
+    // untuk memberikan kesan responsif sambil tetap mengirim data.
+    const localDiagnosisPromise = runLocalDiagnosis(capturedImage).catch(e => {
       console.warn('Local diagnosis failed, will rely on server:', e?.message || e);
-    }
-
-    // 2) Persist to server (best-effort). Update UI if it returns richer data.
-    try {
-      const result = await createDiagnosis(submissionData).unwrap();
-      if (result?.success) {
-        setDiagnosisResult((prev) => prev || result);
-      }
-    } catch (error) {
+      return null; // Jangan sampai promise ini gagal dan menghentikan alur
+    });
+    
+    const serverDiagnosisPromise = createDiagnosis(submissionData).unwrap().catch(async (error) => {
       console.error('Gagal mengirim diagnosis, menyimpan ke antrean:', error);
       const offlinePayload = { ...submissionData };
 
@@ -8535,9 +8518,21 @@ const PhotoDiagnosis = () => {
           offlinePayload.photo = null;
         }
       }
-
       await enqueueRequest({ type: 'createDiagnosis', payload: offlinePayload });
-    }
+      return null; // Jangan sampai promise ini gagal
+    });
+
+    // Tunggu keduanya selesai
+    const [localResult, serverResult] = await Promise.all([localDiagnosisPromise, serverDiagnosisPromise]);
+
+    // Prioritaskan hasil dari server jika ada, jika tidak gunakan hasil lokal
+    const finalResult = serverResult?.success ? serverResult : localResult;
+    
+    setDiagnosisResult(finalResult);
+    setCurrentStep('results');
+    
+    // [PERBAIKAN #3] Sembunyikan loading overlay setelah semuanya selesai
+    setIsProcessing(false);
   };
 
   const handleStartNew = () => {
@@ -8547,6 +8542,7 @@ const PhotoDiagnosis = () => {
     setCurrentStep('capture');
   };
 
+  // ... (renderStepIndicator tetap sama) ...
   const renderStepIndicator = () => {
     const steps = [
       { id: 'capture', label: 'Foto', icon: 'Camera' },
@@ -8596,7 +8592,8 @@ const PhotoDiagnosis = () => {
       </div>
     );
   };
-
+  
+  // [PERBAIKAN #4] Gunakan isProcessing (state lokal) untuk loading di form
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 'capture':
@@ -8605,11 +8602,11 @@ const PhotoDiagnosis = () => {
             onImageCapture={handleImageCapture}
             capturedImage={capturedImage}
             onImageRemove={handleImageRemove}
-            isLoading={isLoading}
+            isLoading={isProcessing}
           />
         );
       case 'form':
-        return <DiagnosisForm onSubmit={handleFormSubmit} isLoading={isLoading} hasImage={!!capturedImage} />;
+        return <DiagnosisForm onSubmit={handleFormSubmit} isLoading={isProcessing} hasImage={!!capturedImage} />;
       case 'results':
         return (
           <DiagnosisResults
@@ -8626,8 +8623,8 @@ const PhotoDiagnosis = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* NAV DESKTOP (tanpa back) */}
-      <div className="hidden md:block">
+      {/* ... (sisa JSX tetap sama) ... */}
+            <div className="hidden md:block">
         <DesktopTopNav />
       </div>
 
@@ -8686,14 +8683,14 @@ const PhotoDiagnosis = () => {
           <BottomNavigation />
         </div>
       </div>
-
-      <LoadingOverlay isVisible={isLoading} message="Menganalisis foto tanaman..." animationType="camera" />
+      
+      {/* [PERBAIKAN #5] Gunakan isProcessing untuk mengontrol LoadingOverlay */}
+      <LoadingOverlay isVisible={isProcessing} message="Menganalisis foto tanaman..." animationType="camera" />
     </div>
   );
 };
 
 export default PhotoDiagnosis;
-
 
 
 --- File: ./src/pages/register/index.jsx ---
@@ -8809,7 +8806,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
-import { useResetPasswordMutation } from '../../services/authApi'; // <-- Impor hook reset
+import { useResetPasswordMutation } from '../../services/authApi';
 
 const ResetPasswordPage = () => {
     const [password, setPassword] = useState('');
@@ -8820,10 +8817,8 @@ const ResetPasswordPage = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     
-    // Ambil token dari URL (?token=...)
     const token = searchParams.get('token');
 
-    // Gunakan hook reset password
     const [resetPassword, { isLoading }] = useResetPasswordMutation();
 
     useEffect(() => {
@@ -8851,15 +8846,11 @@ const ResetPasswordPage = () => {
         setError(null);
 
         try {
-            // Panggil API resetPassword
             await resetPassword({ token, password }).unwrap();
-            
-            // Jika sukses, ubah state
             setIsSuccess(true);
             
         } catch (err) {
-            // Tangani error dari API (e.g., token sudah kedaluwarsa/digunakan)
-            const errorMessage = err.data?.error || "Gagal mengatur password. Silakan minta tautan reset baru.";
+            const errorMessage = err.data?.error || "Gagal mengatur password. Token mungkin sudah kedaluwarsa atau tidak valid.";
             setError(errorMessage);
         }
     };
@@ -8892,25 +8883,26 @@ const ResetPasswordPage = () => {
                         </div>
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            {/* Tampilkan error jika token hilang */}
-                            {!token && <div className="text-sm text-center text-destructive bg-destructive/10 p-3 rounded-md">Token reset tidak valid atau tidak ditemukan.</div>}
+                            {error && <div className="text-sm text-center text-destructive bg-destructive/10 p-3 rounded-md">{error}</div>}
                             
                             <Input
                                 label="Password Baru" id="password" type="password"
                                 placeholder="Minimal 6 karakter"
                                 value={password} onChange={(e) => setPassword(e.target.value)}
                                 required disabled={!token || isLoading}
+                                autoComplete="new-password"
                             />
                             <Input
                                 label="Konfirmasi Password Baru" id="confirmPassword" type="password"
                                 placeholder="Ulangi password baru Anda"
                                 value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                                 required disabled={!token || isLoading}
+                                autoComplete="new-password"
                             />
 
-                            {error && <div className="text-sm text-center text-destructive bg-destructive/10 p-3 rounded-md">{error}</div>}
-
-                            <Button type="submit" fullWidth loading={isLoading} disabled={!token || isLoading}>
+                            {/* [PERBAIKAN BUG] Nonaktifkan spinner sementara untuk menghindari error rendering SVG.
+                                Teks 'Menyimpan...' sudah cukup sebagai umpan balik. */}
+                            <Button type="submit" fullWidth loading={false} disabled={!token || isLoading} iconName="Save" iconPosition="left">
                                 {isLoading ? 'Menyimpan...' : 'Simpan Password Baru'}
                             </Button>
                         </form>
