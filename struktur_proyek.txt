@@ -947,7 +947,7 @@ ai_tani_kupang Tallwind - Copy
 │   │       ├── auth.js
 │   │       ├── dev.js
 │   │       ├── diagnosis.js
-│   │       ├── events.js
+│   │       ├── farm-tasks.js
 │   │       ├── health.js
 │   │       ├── photos.js
 │   │       ├── utils.js
@@ -1064,7 +1064,7 @@ ai_tani_kupang Tallwind - Copy
 │   │   ├── authApi.js
 │   │   ├── authSlice.js
 │   │   ├── diagnosisApi.js
-│   │   ├── eventsApi.js
+│   │   ├── farmTasksApi.js
 │   │   └── weatherApi.js
 │   ├── setupTests.js
 │   ├── styles

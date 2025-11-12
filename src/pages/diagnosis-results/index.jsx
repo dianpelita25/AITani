@@ -1,7 +1,9 @@
+// src/pages/diagnosis-results/index.jsx
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { enqueueRequest } from '../../offline/queueService';
-import { useCreateEventMutation } from '../../services/eventsApi';
+import { useCreateFarmTaskMutation } from '../../services/farmTasksApi';
 import DiagnosisHeader from './components/DiagnosisHeader';
 import CropImageDisplay from './components/CropImageDisplay';
 import DiagnosisCard from './components/DiagnosisCard';
@@ -19,7 +21,7 @@ const DiagnosisResults = () => {
   const navigate = useNavigate();
 
   const [isShareOpen, setIsShareOpen] = useState(false);
-  const [createEvent] = useCreateEventMutation();
+  const [createEvent] = useCreateFarmTaskMutation();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSaving, setIsSaving] = useState(false);
 

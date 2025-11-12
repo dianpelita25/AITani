@@ -1,7 +1,7 @@
 // src/pages/home-dashboard/index.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet';
-import { useGetEventsQuery } from '../../services/eventsApi';
+import { useGetFarmTasksQuery } from '../../services/farmTasksApi';
 import { useGetAlertsQuery } from '../../services/alertsApi';
 import WelcomeHeader from './components/WelcomeHeader';
 import NavigationCard from './components/NavigationCard';
@@ -33,7 +33,8 @@ export default function HomeDashboard() {
   // Events hari ini (widget tugas)
   const start = new Date(); start.setHours(0,0,0,0);
   const end   = new Date(); end.setHours(23,59,59,999);
-  const { data: eventsToday = [] } = useGetEventsQuery({ from: start.toISOString(), to: end.toISOString() });
+  const { data: eventsToday = [] } = useGetFarmTasksQuery({ from: start.toISOString(), to: end.toISOString() });
+
 
   // Alerts untuk Nearby
   const { data: alertsRaw = [] } = useGetAlertsQuery(undefined, { skip: !isOnline });

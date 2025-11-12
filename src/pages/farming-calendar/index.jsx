@@ -1,12 +1,15 @@
 // src/pages/farming-calendar/index.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+// [PERBAIKAN #1] Pindahkan semua impor hook ke sini, di bagian atas.
 import {
-  useGetEventsQuery,
-  useCreateEventMutation,
-  useUpdateEventMutation,
-  useDeleteEventMutation,
-} from '../../services/eventsApi';
+  useGetFarmTasksQuery,
+  useCreateFarmTaskMutation,
+  useUpdateFarmTaskMutation,
+  useDeleteFarmTaskMutation,
+} from '../../services/farmTasksApi';
+
 import {
   enqueueRequest,
   upsertEventLocal,
@@ -49,16 +52,18 @@ const FarmingCalendar = () => {
 
   const range = useMemo(() => makeRange(currentDate), [currentDate]);
 
-  const { data: eventsOnline = [], isFetching, isError } = useGetEventsQuery(range, {
+  // [PERBAIKAN #2] Gunakan nama hook yang benar (useGetFarmTasksQuery)
+  const { data: eventsOnline = [], isFetching, isError } = useGetFarmTasksQuery(range, {
     skip: !isOnline,
     refetchOnReconnect: true,
     refetchOnFocus: false,
     keepUnusedDataFor: 3600,
   });
 
-  const [createEvent] = useCreateEventMutation();
-  const [updateEvent] = useUpdateEventMutation();
-  const [deleteEvent] = useDeleteEventMutation();
+  // [PERBAIKAN #3] Gunakan nama hook mutasi yang benar
+  const [createEvent] = useCreateFarmTaskMutation();
+  const [updateEvent] = useUpdateFarmTaskMutation();
+  const [deleteEvent] = useDeleteFarmTaskMutation();
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -230,27 +235,22 @@ const FarmingCalendar = () => {
     };
   };
 
-  // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  // FIX: handler untuk klik event pada tampilan mobile
   const handleEventClick = (event) => {
     const raw = event?.date || event?.start_at || event;
     const date = raw ? new Date(raw) : new Date();
     setSelectedDate(date);
     setCurrentDate(date);
   };
-  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
   const filteredEvents = getFilteredEvents();
   const eventCounts = getEventCounts();
 
-  // Loading saat ONLINE saja
   if (isFetching && isOnline) {
     return (
       <LoadingOverlay isVisible={true} message="Memuat kalender pertanian..." animationType="plant" />
     );
   }
 
-  // Error saat ONLINE saja
   if (isError && isOnline) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -265,18 +265,14 @@ const FarmingCalendar = () => {
     );
   }
 
-  // ===== MOBILE =====
   if (isMobile) {
     return (
       <div className="min-h-screen bg-background">
         <div className="hidden md:block">
           <DesktopTopNav />
         </div>
-
         <div className="mx-auto w-full max-w-screen-xl px-4 md:px-6 lg:px-8">
           <OfflineStatusBanner isOnline={isOnline} />
-
-          {/* HEADER DALAM CONTAINER */}
           <div className="bg-card border-b border-border sticky top-0 z-30">
             <div className="px-0 md:px-2 lg:px-4 py-4">
               <div className="flex items-center gap-3">
@@ -294,7 +290,6 @@ const FarmingCalendar = () => {
               </div>
             </div>
           </div>
-
           <MobileCalendarView
             events={filteredEvents}
             onEventClick={handleEventClick}
@@ -302,14 +297,12 @@ const FarmingCalendar = () => {
             currentDate={currentDate}
             onDateChange={setCurrentDate}
           />
-
           <AddEventModal
             isOpen={isAddEventModalOpen}
             onClose={() => setIsAddEventModalOpen(false)}
             onAddEvent={handleAddEvent}
             selectedDate={selectedDate}
           />
-
           <div className="md:hidden">
             <BottomNavigation />
           </div>
@@ -318,16 +311,12 @@ const FarmingCalendar = () => {
     );
   }
 
-  // ===== DESKTOP =====
   return (
     <div className="min-h-screen bg-background">
       <div className="hidden md:block">
-        {/* Tanpa showBack — back pindah ke header container */}
         <DesktopTopNav />
       </div>
-
       <div className="mx-auto w-full max-w-screen-xl px-4 md:px-6 lg:px-8">
-        {/* HEADER DALAM CONTAINER */}
         <div className="bg-card border-b border-border sticky top-0 z-30">
           <div className="px-0 md:px-2 lg:px-4 py-6">
             <div className="flex items-center gap-3">
@@ -345,9 +334,7 @@ const FarmingCalendar = () => {
             </div>
           </div>
         </div>
-
         <OfflineStatusBanner isOnline={isOnline} />
-
         <div className="flex h-screen">
           <div className="flex-1 flex flex-col">
             <CalendarHeader
@@ -383,15 +370,12 @@ const FarmingCalendar = () => {
             />
           </div>
         </div>
-
         <AddEventModal
           isOpen={isAddEventModalOpen}
           onClose={() => setIsAddEventModalOpen(false)}
           onAddEvent={handleAddEvent}
           selectedDate={selectedDate}
         />
-
-        {/* tetap aman dipanggil; komponennya sudah md:hidden */}
         <div className="md:hidden">
           <BottomNavigation />
         </div>
