@@ -8,7 +8,13 @@ import jwt from '@tsndr/cloudflare-worker-jwt';
 import { handleRegister, handleLogin, handleForgotPassword, handleResetPassword } from './routes/auth';
 import { handlePhotoGet } from './routes/photos';
 import { handleGetAlerts, handleCreateAlert, handleDeleteAlert } from './routes/alerts';
-import { handleGetEvents, handleCreateEvent, handleUpdateEvent, handleDeleteEvent } from './routes/events';
+// [PERUBAHAN] Impor sekarang dari 'farm-tasks.js' (seharusnya sudah otomatis diperbarui oleh VS Code)
+import { 
+    handleGetEvents as handleGetFarmTasks, 
+    handleCreateEvent as handleCreateFarmTask, 
+    handleUpdateEvent as handleUpdateFarmTask, 
+    handleDeleteEvent as handleDeleteFarmTask 
+} from './routes/farm-tasks';
 import { handleGetDiagnosisHistory, handleCreateDiagnosis } from './routes/diagnosis';
 import { handleGetWeatherAdvice } from './routes/weather';
 import { handleSeedAlerts } from './routes/dev';
@@ -17,8 +23,7 @@ import { json } from './routes/utils';
 const app = new Hono();
 
 // --- Middleware ---
-
-// 1. Middleware CORS (berjalan untuk semua permintaan)
+// ... (Middleware CORS dan auth tidak berubah) ...
 app.use('*', (c, next) => {
     const env = c.env;
     const allowedOrigins = (env.ALLOWED_ORIGIN || '*').split(',').map(o => o.trim());
@@ -28,8 +33,6 @@ app.use('*', (c, next) => {
         allowHeaders: ['Content-Type', 'Authorization', 'X-Account-Id', 'X-User-Id'],
     })(c, next);
 });
-
-// 2. Middleware Autentikasi ("Penjaga Pintu")
 const authMiddleware = async (c, next) => {
   const authHeader = c.req.header('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -47,13 +50,14 @@ const authMiddleware = async (c, next) => {
   }
 };
 
+
 // --- Definisi Routes ---
 
 // A. Route Publik
 app.post('/auth/register', handleRegister);
 app.post('/auth/login', handleLogin);
 app.post('/auth/forgot-password', handleForgotPassword);
-app.post('/auth/reset-password', handleResetPassword); // <-- Route Baru
+app.post('/auth/reset-password', handleResetPassword);
 app.get('/health', (c) => json({ ok: true, ts: new Date().toISOString() }, 200, c.env, c.req.raw));
 
 // B. Route Terproteksi
@@ -61,10 +65,11 @@ app.get('/alerts', authMiddleware, handleGetAlerts);
 app.post('/alerts', authMiddleware, handleCreateAlert);
 app.delete('/alerts/:id', authMiddleware, handleDeleteAlert);
 
-app.get('/events', authMiddleware, handleGetEvents);
-app.post('/events', authMiddleware, handleCreateEvent);
-app.patch('/events/:id', authMiddleware, handleUpdateEvent);
-app.delete('/events/:id', authMiddleware, handleDeleteEvent);
+// [PERUBAHAN KUNCI] Mengganti rute '/events' menjadi '/farm-tasks'
+app.get('/farm-tasks', authMiddleware, handleGetFarmTasks);
+app.post('/farm-tasks', authMiddleware, handleCreateFarmTask);
+app.patch('/farm-tasks/:id', authMiddleware, handleUpdateFarmTask);
+app.delete('/farm-tasks/:id', authMiddleware, handleDeleteFarmTask);
 
 app.get('/diagnosis', authMiddleware, handleGetDiagnosisHistory);
 app.post('/diagnosis', authMiddleware, handleCreateDiagnosis);
@@ -89,7 +94,6 @@ async function getWeatherAdviceBMKG(lat, lon) {
 
 // --- Handler Utama Worker ---
 export default {
-    // Handler untuk permintaan HTTP
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
         if (url.pathname.startsWith('/api/')) {
@@ -101,7 +105,6 @@ export default {
         return app.fetch(request, env, ctx);
     },
 
-    // Handler untuk tugas terjadwal (Cron)
     async scheduled(controller, env, ctx) {
         console.log("Cron job is running...");
         try {

@@ -1,7 +1,10 @@
+// src/pages/photo-diagnosis/components/DiagnosisResults.jsx
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCreateEventMutation } from '../../../services/eventsApi'; // <-- LANGKAH 1: IMPORT
-import { enqueueRequest } from '../../../offline/queueService'; // <-- LANGKAH 1: IMPORT
+// [PERBAIKAN KUNCI] Impor dan gunakan nama hook yang benar
+import { useCreateFarmTaskMutation } from '../../../services/farmTasksApi'; 
+import { enqueueRequest } from '../../../offline/queueService';
 import Icon from '../../../components/AppIcon';
 import Image from '../../../components/AppImage';
 import Button from '../../../components/ui/Button';
@@ -16,8 +19,8 @@ const DiagnosisResults = ({
   const navigate = useNavigate();
   const [showShareSheet, setShowShareSheet] = useState(false);
   
-  // LANGKAH 2: GUNAKAN HOOK MUTASI
-  const [createEvent, { isLoading: isSaving }] = useCreateEventMutation();
+  // [PERBAIKAN KUNCI] Panggil hook dengan nama yang benar
+  const [createEvent, { isLoading: isSaving }] = useCreateFarmTaskMutation();
 
   const getSeverityColor = (severity) => {
     switch (severity?.toLowerCase()) {
@@ -37,7 +40,6 @@ const DiagnosisResults = ({
     }
   };
 
-  // LANGKAH 3: IMPLEMENTASIKAN FUNGSI `handleSaveAllPlans` YANG BENAR
   const handleSaveAllPlans = async () => {
     if (!results?.recommendations || results.recommendations.length === 0) {
       alert("Tidak ada rekomendasi untuk disimpan.");
@@ -46,7 +48,6 @@ const DiagnosisResults = ({
 
     const plansToSave = results.recommendations.map(rec => {
       const date = new Date().toISOString().split('T')[0];
-      // Gunakan time hanya jika format HH:mm, kalau tidak biarkan kosong agar default T00:00 dipakai
       const hhmm = /^\d{1,2}:\d{2}$/;
       const time = hhmm.test(rec.timeframe || '') ? rec.timeframe : undefined;
 
@@ -61,10 +62,13 @@ const DiagnosisResults = ({
         completed: false,
         notes: [rec.description, `Prioritas: ${rec.priority}`],
         createdAt: new Date().toISOString(),
+        // [PENYEMPURNAAN] Pastikan tipe 'createEvent' tetap sama untuk offline queue
+        typeForQueue: 'createEvent' 
       };
     });
 
     try {
+      // [PENYEMPURNAAN] Di sini kita menggunakan 'createEvent' yang merupakan alias dari 'useCreateFarmTaskMutation'
       await Promise.all(plansToSave.map(plan => createEvent(plan).unwrap()));
       navigate('/farming-calendar', { 
         state: { message: `${plansToSave.length} rencana baru berhasil disimpan!` }
@@ -72,6 +76,7 @@ const DiagnosisResults = ({
     } catch (error) {
       console.error('Gagal menyimpan rencana, menyimpan ke antrean:', error);
       for (const plan of plansToSave) {
+        // [PENYEMPURNAAN] Pastikan tipe yang dikirim ke offline queue tetap 'createEvent'
         await enqueueRequest({ type: 'createEvent', payload: plan });
       }
       alert(`Anda sedang offline. ${plansToSave.length} rencana disimpan dan akan disinkronkan.`);
@@ -88,6 +93,7 @@ const DiagnosisResults = ({
 
   return (
     <div className="space-y-6">
+      {/* Sisa dari JSX tidak ada perubahan dan tetap sama persis */}
       {/* Header */}
       <div className="bg-card rounded-lg border border-border p-6">
         <div className="flex items-center space-x-3 mb-4">
@@ -171,7 +177,6 @@ const DiagnosisResults = ({
       {/* Action Buttons */}
       <div className="space-y-3">
         <div className="flex flex-col gap-3">
-          {/* LANGKAH 4: HUBUNGKAN TOMBOL KE FUNGSI YANG BENAR */}
           <Button
             variant="default"
             onClick={handleSaveAllPlans}

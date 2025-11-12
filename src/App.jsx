@@ -6,17 +6,16 @@ import { setCredentials } from './services/authSlice'; // <-- [BARU] Impor instr
 import Routes from "./Routes";
 import { useCreateAlertMutation } from './services/alertsApi';
 import { useCreateDiagnosisMutation } from './services/diagnosisApi';
-import { useCreateEventMutation, useUpdateEventMutation, useDeleteEventMutation } from './services/eventsApi';
-import { retryQueue } from './offline/queueService';
+import { useCreateFarmTaskMutation, useUpdateFarmTaskMutation, useDeleteFarmTaskMutation } from './services/farmTasksApi';import { retryQueue } from './offline/queueService';
 import { Toaster, toast } from 'react-hot-toast';
 
 function App() {
   const dispatch = useDispatch(); // <-- [BARU] Siapkan dispatch
   const [createAlert] = useCreateAlertMutation();
   const [createDiagnosis] = useCreateDiagnosisMutation();
-  const [createEvent] = useCreateEventMutation();
-  const [updateEvent] = useUpdateEventMutation();
-  const [deleteEvent] = useDeleteEventMutation();
+  const [createEvent] = useCreateFarmTaskMutation();
+  const [updateEvent] = useUpdateFarmTaskMutation();
+  const [deleteEvent] = useDeleteFarmTaskMutation();
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine
   );

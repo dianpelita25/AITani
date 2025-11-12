@@ -1,7 +1,7 @@
 --- AWAL DARI SNAPSHOT KODE PROYEK WEB ---
 
 Proyek: ai_tani_kupang Tallwind - Copy
-Dibuat pada: Wed Nov 12 2025 01:48:45 GMT+0800 (Singapore Standard Time)
+Dibuat pada: Wed Nov 12 2025 10:31:46 GMT+0800 (Singapore Standard Time)
 
 ================================================================================
 STRUKTUR FILE & KONTEN
@@ -585,17 +585,16 @@ import { setCredentials } from './services/authSlice'; // <-- [BARU] Impor instr
 import Routes from "./Routes";
 import { useCreateAlertMutation } from './services/alertsApi';
 import { useCreateDiagnosisMutation } from './services/diagnosisApi';
-import { useCreateEventMutation, useUpdateEventMutation, useDeleteEventMutation } from './services/eventsApi';
-import { retryQueue } from './offline/queueService';
+import { useCreateFarmTaskMutation, useUpdateFarmTaskMutation, useDeleteFarmTaskMutation } from './services/farmTasksApi';import { retryQueue } from './offline/queueService';
 import { Toaster, toast } from 'react-hot-toast';
 
 function App() {
   const dispatch = useDispatch(); // <-- [BARU] Siapkan dispatch
   const [createAlert] = useCreateAlertMutation();
   const [createDiagnosis] = useCreateDiagnosisMutation();
-  const [createEvent] = useCreateEventMutation();
-  const [updateEvent] = useUpdateEventMutation();
-  const [deleteEvent] = useDeleteEventMutation();
+  const [createEvent] = useCreateFarmTaskMutation();
+  const [updateEvent] = useUpdateFarmTaskMutation();
+  const [deleteEvent] = useDeleteFarmTaskMutation();
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine
   );
@@ -4983,7 +4982,7 @@ export default RecommendationCard;
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { enqueueRequest } from '../../offline/queueService';
-import { useCreateEventMutation } from '../../services/eventsApi';
+import { useCreateFarmTaskMutation } from '../../services/farmTasksApi';
 import DiagnosisHeader from './components/DiagnosisHeader';
 import CropImageDisplay from './components/CropImageDisplay';
 import DiagnosisCard from './components/DiagnosisCard';
@@ -5001,7 +5000,7 @@ const DiagnosisResults = () => {
   const navigate = useNavigate();
 
   const [isShareOpen, setIsShareOpen] = useState(false);
-  const [createEvent] = useCreateEventMutation();
+  const [createEvent] = useCreateFarmTaskMutation();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -6264,12 +6263,12 @@ export default MobileCalendarView;
 // src/pages/farming-calendar/index.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  useGetEventsQuery,
-  useCreateEventMutation,
-  useUpdateEventMutation,
-  useDeleteEventMutation,
-} from '../../services/eventsApi';
+const { data: eventsOnline = [], isFetching, isError } = useGetFarmTasksQuery(range, {
+    skip: !isOnline,
+    refetchOnReconnect: true,
+    refetchOnFocus: false,
+    keepUnusedDataFor: 3600,
+});
 import {
   enqueueRequest,
   upsertEventLocal,
@@ -6319,9 +6318,9 @@ const FarmingCalendar = () => {
     keepUnusedDataFor: 3600,
   });
 
-  const [createEvent] = useCreateEventMutation();
-  const [updateEvent] = useUpdateEventMutation();
-  const [deleteEvent] = useDeleteEventMutation();
+const [createEvent] = useCreateFarmTaskMutation();
+const [updateEvent] = useUpdateFarmTaskMutation();
+const [deleteEvent] = useDeleteFarmTaskMutation();
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -7327,7 +7326,7 @@ export default WelcomeHeader;
 // src/pages/home-dashboard/index.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet';
-import { useGetEventsQuery } from '../../services/eventsApi';
+import { useGetFarmTasksQuery } from '../../services/farmTasksApi';
 import { useGetAlertsQuery } from '../../services/alertsApi';
 import WelcomeHeader from './components/WelcomeHeader';
 import NavigationCard from './components/NavigationCard';
@@ -7359,7 +7358,8 @@ export default function HomeDashboard() {
   // Events hari ini (widget tugas)
   const start = new Date(); start.setHours(0,0,0,0);
   const end   = new Date(); end.setHours(23,59,59,999);
-  const { data: eventsToday = [] } = useGetEventsQuery({ from: start.toISOString(), to: end.toISOString() });
+  const { data: eventsToday = [] } = useGetFarmTasksQuery({ from: start.toISOString(), to: end.toISOString() });
+
 
   // Alerts untuk Nearby
   const { data: alertsRaw = [] } = useGetAlertsQuery(undefined, { skip: !isOnline });
@@ -8223,10 +8223,13 @@ export default DiagnosisForm;
 
 --- File: ./src/pages/photo-diagnosis/components/DiagnosisResults.jsx ---
 
+// src/pages/photo-diagnosis/components/DiagnosisResults.jsx
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCreateEventMutation } from '../../../services/eventsApi'; // <-- LANGKAH 1: IMPORT
-import { enqueueRequest } from '../../../offline/queueService'; // <-- LANGKAH 1: IMPORT
+// [PERBAIKAN KUNCI] Impor dan gunakan nama hook yang benar
+import { useCreateFarmTaskMutation } from '../../../services/farmTasksApi'; 
+import { enqueueRequest } from '../../../offline/queueService';
 import Icon from '../../../components/AppIcon';
 import Image from '../../../components/AppImage';
 import Button from '../../../components/ui/Button';
@@ -8241,8 +8244,8 @@ const DiagnosisResults = ({
   const navigate = useNavigate();
   const [showShareSheet, setShowShareSheet] = useState(false);
   
-  // LANGKAH 2: GUNAKAN HOOK MUTASI
-  const [createEvent, { isLoading: isSaving }] = useCreateEventMutation();
+  // [PERBAIKAN KUNCI] Panggil hook dengan nama yang benar
+  const [createEvent, { isLoading: isSaving }] = useCreateFarmTaskMutation();
 
   const getSeverityColor = (severity) => {
     switch (severity?.toLowerCase()) {
@@ -8262,7 +8265,6 @@ const DiagnosisResults = ({
     }
   };
 
-  // LANGKAH 3: IMPLEMENTASIKAN FUNGSI `handleSaveAllPlans` YANG BENAR
   const handleSaveAllPlans = async () => {
     if (!results?.recommendations || results.recommendations.length === 0) {
       alert("Tidak ada rekomendasi untuk disimpan.");
@@ -8271,7 +8273,6 @@ const DiagnosisResults = ({
 
     const plansToSave = results.recommendations.map(rec => {
       const date = new Date().toISOString().split('T')[0];
-      // Gunakan time hanya jika format HH:mm, kalau tidak biarkan kosong agar default T00:00 dipakai
       const hhmm = /^\d{1,2}:\d{2}$/;
       const time = hhmm.test(rec.timeframe || '') ? rec.timeframe : undefined;
 
@@ -8286,10 +8287,13 @@ const DiagnosisResults = ({
         completed: false,
         notes: [rec.description, `Prioritas: ${rec.priority}`],
         createdAt: new Date().toISOString(),
+        // [PENYEMPURNAAN] Pastikan tipe 'createEvent' tetap sama untuk offline queue
+        typeForQueue: 'createEvent' 
       };
     });
 
     try {
+      // [PENYEMPURNAAN] Di sini kita menggunakan 'createEvent' yang merupakan alias dari 'useCreateFarmTaskMutation'
       await Promise.all(plansToSave.map(plan => createEvent(plan).unwrap()));
       navigate('/farming-calendar', { 
         state: { message: `${plansToSave.length} rencana baru berhasil disimpan!` }
@@ -8297,6 +8301,7 @@ const DiagnosisResults = ({
     } catch (error) {
       console.error('Gagal menyimpan rencana, menyimpan ke antrean:', error);
       for (const plan of plansToSave) {
+        // [PENYEMPURNAAN] Pastikan tipe yang dikirim ke offline queue tetap 'createEvent'
         await enqueueRequest({ type: 'createEvent', payload: plan });
       }
       alert(`Anda sedang offline. ${plansToSave.length} rencana disimpan dan akan disinkronkan.`);
@@ -8313,6 +8318,7 @@ const DiagnosisResults = ({
 
   return (
     <div className="space-y-6">
+      {/* Sisa dari JSX tidak ada perubahan dan tetap sama persis */}
       {/* Header */}
       <div className="bg-card rounded-lg border border-border p-6">
         <div className="flex items-center space-x-3 mb-4">
@@ -8396,7 +8402,6 @@ const DiagnosisResults = ({
       {/* Action Buttons */}
       <div className="space-y-3">
         <div className="flex flex-col gap-3">
-          {/* LANGKAH 4: HUBUNGKAN TOMBOL KE FUNGSI YANG BENAR */}
           <Button
             variant="default"
             onClick={handleSaveAllPlans}
@@ -8428,7 +8433,6 @@ const DiagnosisResults = ({
 };
 
 export default DiagnosisResults;
-
 
 
 --- File: ./src/pages/photo-diagnosis/index.jsx ---
@@ -9083,7 +9087,7 @@ const baseQuery = async (args, api, extraOptions) => {
 export const api = createApi({
   reducerPath: 'api',
   baseQuery,
-  tagTypes: ['Alerts', 'Events', 'DiagnosisHistory'],
+  tagTypes: ['Alerts', 'FarmTasks', 'DiagnosisHistory'],
   endpoints: () => ({}),
 });
 
@@ -9278,9 +9282,9 @@ export const { useCreateDiagnosisMutation, useGetDiagnosisHistoryQuery } = diagn
 // --- AKHIR DARI PERUBAHAN ---
 
 
---- File: ./src/services/eventsApi.js ---
+--- File: ./src/services/farmTasksApi.js ---
 
-// src/services/eventsApi.js
+// src/services/farmTasksApi.js
 import { api } from './api';
 
 // Helper ISO
@@ -9294,98 +9298,94 @@ const defaultRange = () => {
   return { from: iso(from), to: iso(to) };
 };
 
-export const eventsApi = api.injectEndpoints({
+export const farmTasksApi = api.injectEndpoints({
   endpoints: (builder) => ({
 
-    // GET /events?from=&to=&status=
-    getEvents: builder.query({
+    // GET /farm-tasks?from=&to=&status=
+    getFarmTasks: builder.query({
       query: (params) => {
         const range = params ?? defaultRange();
         const qs = new URLSearchParams({ from: range.from, to: range.to });
         if (range.status) qs.set('status', range.status);
-        return `events?${qs.toString()}`;
+        // [PERUBAHAN KUNCI] Menggunakan URL baru
+        return `farm-tasks?${qs.toString()}`;
       },
       // Normalisasi bentuk data agar cocok dengan kebutuhan UI
       transformResponse: (res) => {
         if (!Array.isArray(res)) return [];
         return res.map((e) => {
-          // start_at ISO -> pecah jadi tanggal (YYYY-MM-DD) dan waktu (HH:mm)
           const start = e.start_at ? new Date(e.start_at) : null;
           const date = start ? start.toISOString().slice(0, 10) : undefined;
           const time = start ? start.toISOString().slice(11, 16) : undefined;
-
-          // Backend pakai status 'pending'/'completed'; UI pakai boolean completed
           const completed = (e.status || '').toLowerCase() === 'completed';
-
-          return {
-            ...e,
-            date,
-            time,
-            completed,
-          };
+          return { ...e, date, time, completed };
         });
       },
-      providesTags: ['Events'],
+      providesTags: ['FarmTasks'], // [PERUBAHAN KUNCI]
     }),
 
-    // POST /events
-    createEvent: builder.mutation({
-      query: (eventData) => {
-        // Susun start_at jika FE awalnya kirim {date, time}
+    // POST /farm-tasks
+    createFarmTask: builder.mutation({
+      query: (taskData) => {
+        // Susun start_at jika FE awalnya kirim {date, time} - LOGIKA LENGKAP ASLI
         const start_at =
-          eventData.start_at ||
+          taskData.start_at ||
           new Date(
-            (eventData.date || new Date().toISOString().slice(0, 10)) +
-            (eventData.time ? `T${eventData.time}:00Z` : 'T00:00:00Z')
+            (taskData.date || new Date().toISOString().slice(0, 10)) +
+            (taskData.time ? `T${taskData.time}:00Z` : 'T00:00:00Z')
           ).toISOString();
 
         const body = {
-          id: eventData.id,
-          title: eventData.title,
-          type: eventData.type ?? null,
-          crop: eventData.crop ?? null,
-          location: eventData.location ?? null,
+          id: taskData.id,
+          title: taskData.title,
+          type: taskData.type ?? null,
+          crop: taskData.crop ?? null,
+          location: taskData.location ?? null,
           // Backend akan JSON.stringify(notes), jadi kirimkan array/object OK
-          notes: eventData.notes ?? [],
+          notes: taskData.notes ?? [],
           start_at,
-          end_at: eventData.end_at ?? null,
-          all_day: eventData.all_day ? 1 : 0,
-          status: eventData.status ?? 'pending',
-          source_type: eventData.source_type ?? null,
-          source_id: eventData.source_id ?? null,
+          end_at: taskData.end_at ?? null,
+          all_day: taskData.all_day ? 1 : 0,
+          status: taskData.status ?? 'pending',
+          source_type: taskData.source_type ?? null,
+          source_id: taskData.source_id ?? null,
         };
-
-        return { url: 'events', method: 'POST', body };
+        // [PERUBAHAN KUNCI] Menggunakan URL baru
+        return { url: 'farm-tasks', method: 'POST', body };
       },
-      invalidatesTags: ['Events'],
+      invalidatesTags: ['FarmTasks'], // [PERUBAHAN KUNCI]
     }),
 
-    // PATCH /events/:id
-    updateEvent: builder.mutation({
+    // PATCH /farm-tasks/:id
+    updateFarmTask: builder.mutation({
       query: ({ id, ...updates }) => ({
-        url: `events/${id}`,
+        // [PERUBAHAN KUNCI] Menggunakan URL baru
+        url: `farm-tasks/${id}`,
         method: 'PATCH',
         body: updates,
       }),
-      invalidatesTags: ['Events'],
+      invalidatesTags: ['FarmTasks'], // [PERUBAHAN KUNCI]
     }),
 
-    // DELETE /events/:id
-    deleteEvent: builder.mutation({
-      query: (id) => ({ url: `events/${id}`, method: 'DELETE' }),
-      invalidatesTags: ['Events'],
+    // DELETE /farm-tasks/:id
+    deleteFarmTask: builder.mutation({
+      query: (id) => ({
+        // [PERUBAHAN KUNCI] Menggunakan URL baru
+        url: `farm-tasks/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['FarmTasks'], // [PERUBAHAN KUNCI]
     }),
 
   }),
 });
 
 export const {
-  useGetEventsQuery,
-  useCreateEventMutation,
-  useUpdateEventMutation,
-  useDeleteEventMutation,
-} = eventsApi;
-
+  useGetFarmTasksQuery,
+  useCreateFarmTaskMutation,
+  useUpdateFarmTaskMutation,
+  useDeleteFarmTaskMutation,
+} = farmTasksApi;
 
 
 --- File: ./src/services/weatherApi.js ---
