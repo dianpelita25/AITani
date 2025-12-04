@@ -17,7 +17,7 @@ import {
 } from './routes/farm-tasks';
 import { handleGetDiagnosisHistory, handleCreateDiagnosis } from './routes/diagnosis';
 import { handleGetWeatherAdvice } from './routes/weather';
-import { handleSeedAlerts } from './routes/dev';
+import { handleSeedAlerts, seedAlertsFromFixtures } from './routes/dev';
 import { json } from './routes/utils';
 
 const app = new Hono();
@@ -121,3 +121,5 @@ export default {
         }
     }
 };
+
+export { seedAlertsFromFixtures };

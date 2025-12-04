@@ -1,20 +1,57 @@
+// src/pages/photo-diagnosis/components/DiagnosisForm.jsx
+
 import React, { useState, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
 
-const DiagnosisForm = ({ 
-  onSubmit, 
-  isLoading = false, 
-  hasImage = false 
+const LAST_LOCATION_KEY = 'aitani:last-location-v1';
+
+const saveCachedLocation = (latitude, longitude) => {
+  try {
+    const payload = {
+      latitude,
+      longitude,
+      updatedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify(payload));
+  } catch (e) {
+    console.warn('Gagal menyimpan lokasi ke cache:', e);
+  }
+};
+
+const loadCachedLocation = () => {
+  try {
+    const raw = localStorage.getItem(LAST_LOCATION_KEY);
+    if (!raw) return null;
+
+    const data = JSON.parse(raw);
+    if (
+      data &&
+      typeof data.latitude === 'string' &&
+      typeof data.longitude === 'string'
+    ) {
+      return data;
+    }
+    return null;
+  } catch (e) {
+    console.warn('Gagal membaca lokasi dari cache:', e);
+    return null;
+  }
+};
+
+const DiagnosisForm = ({
+  onSubmit,
+  isLoading = false,
+  hasImage = false,
 }) => {
   const [formData, setFormData] = useState({
     field_id: '',
     crop_type: '',
     latitude: '',
     longitude: '',
-    notes: ''
+    notes: '',
   });
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState(null);
@@ -32,11 +69,33 @@ const DiagnosisForm = ({
     { value: 'wortel', label: 'Wortel' },
     { value: 'bayam', label: 'Bayam' },
     { value: 'kangkung', label: 'Kangkung' },
-    { value: 'singkong', label: 'Singkong' }
+    { value: 'singkong', label: 'Singkong' },
   ];
 
+  // Saat pertama kali mount:
+  // 1) Coba isi dari cache lokasi terakhir
+  // 2) Kalau online, coba ambil lokasi baru
   useEffect(() => {
-    getCurrentLocation();
+    const cached = loadCachedLocation();
+    if (cached) {
+      setFormData((prev) => ({
+        ...prev,
+        latitude: cached.latitude,
+        longitude: cached.longitude,
+      }));
+      // kalau hanya pakai cache, tidak usah kasih error
+      setLocationError(null);
+    }
+
+    if (navigator.onLine) {
+      getCurrentLocation();
+    } else if (!cached) {
+      // Offline dan belum ada cache sama sekali
+      setLocationError(
+        'Tidak dapat mengakses lokasi otomatis saat offline. Silakan isi koordinat manual.'
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getCurrentLocation = () => {
@@ -48,20 +107,30 @@ const DiagnosisForm = ({
     setLocationLoading(true);
     setLocationError(null);
 
-    navigator.geolocation?.getCurrentPosition(
+    navigator.geolocation.getCurrentPosition(
       (position) => {
-        setFormData(prev => ({
+        const latStr = position.coords.latitude.toFixed(6);
+        const lngStr = position.coords.longitude.toFixed(6);
+
+        setFormData((prev) => ({
           ...prev,
-          latitude: position?.coords?.latitude?.toFixed(6),
-          longitude: position?.coords?.longitude?.toFixed(6)
+          latitude: latStr,
+          longitude: lngStr,
         }));
+
+        // simpan ke cache untuk dipakai saat offline
+        saveCachedLocation(latStr, lngStr);
+
         setLocationLoading(false);
+        setLocationError(null);
       },
       (error) => {
         let errorMessage = 'Tidak dapat mendapatkan lokasi';
+
         switch (error?.code) {
           case error?.PERMISSION_DENIED:
-            errorMessage = 'Izin lokasi ditolak. Silakan masukkan koordinat manual.';
+            errorMessage =
+              'Izin lokasi ditolak. Silakan masukkan koordinat manual.';
             break;
           case error?.POSITION_UNAVAILABLE:
             errorMessage = 'Informasi lokasi tidak tersedia.';
@@ -69,29 +138,53 @@ const DiagnosisForm = ({
           case error?.TIMEOUT:
             errorMessage = 'Permintaan lokasi timeout.';
             break;
+          default:
+            break;
         }
-        setLocationError(errorMessage);
+
+        // Coba fallback ke cache kalau ada
+        const cached = loadCachedLocation();
+        if (cached) {
+          setFormData((prev) => ({
+            ...prev,
+            latitude: cached.latitude,
+            longitude: cached.longitude,
+          }));
+          setLocationError(
+            'Tidak dapat mengambil lokasi baru. Menggunakan lokasi terakhir yang tersimpan.'
+          );
+        } else {
+          setLocationError(errorMessage);
+        }
+
         setLocationLoading(false);
       },
       {
         enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 300000
+        maximumAge: 300000,
       }
     );
   };
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
-    
-    // Clear error when user starts typing
+
     if (errors?.[field]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [field]: null
+        [field]: null,
+      }));
+    }
+
+    // Kalau user mengubah latitude/longitude manual, hapus error lokasi
+    if ((field === 'latitude' || field === 'longitude') && errors?.location) {
+      setErrors((prev) => ({
+        ...prev,
+        location: null,
       }));
     }
   };
@@ -117,7 +210,7 @@ const DiagnosisForm = ({
 
   const handleSubmit = (e) => {
     e?.preventDefault();
-    
+
     if (!hasImage) {
       alert('Silakan ambil foto tanaman terlebih dahulu');
       return;
@@ -128,7 +221,7 @@ const DiagnosisForm = ({
         ...formData,
         latitude: parseFloat(formData?.latitude),
         longitude: parseFloat(formData?.longitude),
-        timestamp: new Date()?.toISOString()
+        timestamp: new Date()?.toISOString(),
       };
       onSubmit(submissionData);
     }
@@ -149,6 +242,7 @@ const DiagnosisForm = ({
           </p>
         </div>
       </div>
+
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Field ID */}
         <Input
@@ -210,7 +304,9 @@ const DiagnosisForm = ({
               step="any"
               placeholder="-10.123456"
               value={formData?.latitude}
-              onChange={(e) => handleInputChange('latitude', e?.target?.value)}
+              onChange={(e) =>
+                handleInputChange('latitude', e?.target?.value)
+              }
               error={errors?.location}
             />
             <Input
@@ -219,7 +315,9 @@ const DiagnosisForm = ({
               step="any"
               placeholder="123.456789"
               value={formData?.longitude}
-              onChange={(e) => handleInputChange('longitude', e?.target?.value)}
+              onChange={(e) =>
+                handleInputChange('longitude', e?.target?.value)
+              }
               error={errors?.location}
             />
           </div>
@@ -255,7 +353,7 @@ const DiagnosisForm = ({
           >
             {isLoading ? 'Menganalisis...' : 'Mulai Diagnosis AI'}
           </Button>
-          
+
           {!hasImage && (
             <p className="text-xs text-center text-muted-foreground mt-2">
               Ambil foto tanaman terlebih dahulu untuk melanjutkan

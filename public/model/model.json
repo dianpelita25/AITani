@@ -1,0 +1,195 @@
+{
+  "format": "layers-model",
+  "generatedBy": "keras v3.12.0",
+  "convertedBy": "TensorFlow.js Converter v3.18.0",
+  "modelTopology": {
+    "keras_version": "3.12.0",
+    "backend": "tensorflow",
+    "model_config": {
+      "class_name": "Functional",
+      "config": {
+        "name": "simple_plant_model",
+        "trainable": true,
+        "layers": [
+          {
+            "class_name": "InputLayer",
+            "config": {
+              "batch_input_shape": [null, 128, 128, 3],
+              "dtype": "float32",
+              "sparse": false,
+              "ragged": false,
+              "name": "image"
+            },
+            "name": "image",
+            "inbound_nodes": []
+          },
+          {
+            "class_name": "Rescaling",
+            "config": {
+              "name": "rescaling",
+              "trainable": true,
+              "dtype": "float32",
+              "scale": 0.00392156862745098,
+              "offset": 0.0
+            },
+            "name": "rescaling",
+            "inbound_nodes": [
+              [
+                [
+                  "image",
+                  0,
+                  0,
+                  {}
+                ]
+              ]
+            ]
+          },
+          {
+            "class_name": "Conv2D",
+            "config": {
+              "name": "conv2d",
+              "trainable": true,
+              "dtype": "float32",
+              "filters": 16,
+              "kernel_size": [3, 3],
+              "strides": [1, 1],
+              "padding": "valid",
+              "data_format": "channels_last",
+              "dilation_rate": [1, 1],
+              "groups": 1,
+              "activation": "relu",
+              "use_bias": true,
+              "kernel_initializer": {
+                "class_name": "GlorotUniform",
+                "config": {
+                  "seed": null
+                }
+              },
+              "bias_initializer": {
+                "class_name": "Zeros",
+                "config": {}
+              },
+              "kernel_regularizer": null,
+              "bias_regularizer": null,
+              "activity_regularizer": null,
+              "kernel_constraint": null,
+              "bias_constraint": null
+            },
+            "name": "conv2d",
+            "inbound_nodes": [
+              [
+                [
+                  "rescaling",
+                  0,
+                  0,
+                  {}
+                ]
+              ]
+            ]
+          },
+          {
+            "class_name": "GlobalAveragePooling2D",
+            "config": {
+              "name": "global_average_pooling2d",
+              "trainable": true,
+              "dtype": "float32",
+              "data_format": "channels_last",
+              "keepdims": false
+            },
+            "name": "global_average_pooling2d",
+            "inbound_nodes": [
+              [
+                [
+                  "conv2d",
+                  0,
+                  0,
+                  {}
+                ]
+              ]
+            ]
+          },
+          {
+            "class_name": "Dense",
+            "config": {
+              "name": "pred",
+              "trainable": true,
+              "dtype": "float32",
+              "units": 3,
+              "activation": "softmax",
+              "use_bias": true,
+              "kernel_initializer": {
+                "class_name": "GlorotUniform",
+                "config": {
+                  "seed": null
+                }
+              },
+              "bias_initializer": {
+                "class_name": "Zeros",
+                "config": {}
+              },
+              "kernel_regularizer": null,
+              "bias_regularizer": null,
+              "activity_regularizer": null,
+              "kernel_constraint": null,
+              "bias_constraint": null
+            },
+            "name": "pred",
+            "inbound_nodes": [
+              [
+                [
+                  "global_average_pooling2d",
+                  0,
+                  0,
+                  {}
+                ]
+              ]
+            ]
+          }
+        ],
+        "input_layers": [
+          [
+            "image",
+            0,
+            0
+          ]
+        ],
+        "output_layers": [
+          [
+            "pred",
+            0,
+            0
+          ]
+        ]
+      }
+    }
+  },
+  "weightsManifest": [
+    {
+      "paths": [
+        "group1-shard1of1.bin"
+      ],
+      "weights": [
+        {
+          "name": "conv2d/kernel",
+          "shape": [3, 3, 3, 16],
+          "dtype": "float32"
+        },
+        {
+          "name": "conv2d/bias",
+          "shape": [16],
+          "dtype": "float32"
+        },
+        {
+          "name": "pred/kernel",
+          "shape": [16, 3],
+          "dtype": "float32"
+        },
+        {
+          "name": "pred/bias",
+          "shape": [3],
+          "dtype": "float32"
+        }
+      ]
+    }
+  ]
+}

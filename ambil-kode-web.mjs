@@ -26,6 +26,11 @@ const EXCLUDE_PATHS = [
     '.svelte-kit'   // Jika menggunakan SvelteKit
 ];
 
+// Folder/file substring yang jika muncul di path akan dilewati (misal folder model biner)
+const EXCLUDE_PATH_SUBSTRINGS = [
+    'public/model', // Model AI berisi .bin besar dan unreadable
+];
+
 // File yang harus diabaikan berdasarkan nama
 const EXCLUDE_NAMES = [
     'package-lock.json', // File lock, tidak perlu
@@ -40,7 +45,9 @@ const EXCLUDE_NAMES = [
 const EXCLUDE_EXTENSIONS = [
     '.jpg', '.jpeg', '.png', '.gif', '.webp', '.ico', '.svg',
     '.pdf', '.ttf', '.otf', '.woff', '.woff2', '.eot',
-    '.mp3', '.wav'
+    '.mp3', '.wav',
+    '.bin', '.dat', '.wasm', '.zip', '.gz',
+    '.tflite'
 ];
 
 // Folder utama yang berisi kode aplikasi Anda
@@ -60,6 +67,14 @@ const INCLUDE_FILES_IN_ROOT = [
     'README.md'
 ];
 
+// Skip file jika ukurannya melewati ambang ini (dalam byte)
+// Berguna untuk menghindari file besar yang sulit dibaca (mis. model AI, dump bobot)
+const MAX_FILE_SIZE_BYTES = 400 * 1024; // 400 KB
+
+// Jika ada file besar yang HARUS tetap diambil, letakkan path relatifnya di sini
+const ALLOW_LARGE_FILES = [
+    // contoh: 'src/important-large-file.js'
+];
 
 // --- Recursive File Walker (Fungsi untuk mencari file, tidak perlu diubah) ---
 async function getFiles(dir) {
@@ -69,7 +84,11 @@ async function getFiles(dir) {
             const res = path.resolve(dir, dirent.name);
             const relativePath = path.relative(PROJECT_ROOT, res);
 
-            if (EXCLUDE_PATHS.some(p => relativePath.startsWith(p)) || EXCLUDE_NAMES.includes(dirent.name)) {
+            const shouldSkipFolder =
+                EXCLUDE_PATHS.some(p => relativePath.startsWith(p)) ||
+                EXCLUDE_PATH_SUBSTRINGS.some((sub) => relativePath.includes(sub));
+
+            if (shouldSkipFolder || EXCLUDE_NAMES.includes(dirent.name)) {
                 return [];
             }
             if (dirent.isDirectory()) {
@@ -124,6 +143,23 @@ async function main() {
     
     for (const filePath of allFiles) {
         const relativePath = path.relative(PROJECT_ROOT, filePath).replace(/\\/g, '/');
+        let fileSize = 0;
+        try {
+            const stat = await fs.stat(filePath);
+            fileSize = stat.size;
+        } catch {
+            // jika gagal mendapatkan size, tetap lanjut baca (akan kosong jika gagal lagi)
+        }
+
+        if (
+            MAX_FILE_SIZE_BYTES &&
+            fileSize > MAX_FILE_SIZE_BYTES &&
+            !ALLOW_LARGE_FILES.includes(relativePath)
+        ) {
+            outputContent += `\n\n--- File: ./${relativePath} (SKIPPED: > ${MAX_FILE_SIZE_BYTES} bytes) ---\n`;
+            continue;
+        }
+
         const fileContent = await fs.readFile(filePath, 'utf-8').catch(() => '');
         
         outputContent += `\n\n--- File: ./${relativePath} ---\n`;

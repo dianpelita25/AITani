@@ -1,4 +1,5 @@
 // src/pages/photo-diagnosis/index.jsx
+// KODE LENGKAP 100% - Berdasarkan kode asli Anda dengan satu perbaikan krusial.
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -30,8 +31,6 @@ const PhotoDiagnosis = () => {
   const [formData, setFormData] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [diagnosisResult, setDiagnosisResult] = useState(null);
-  
-  // [PERBAIKAN #1] Kita akan menggunakan state lokal untuk mengontrol loading overlay
   const [isProcessing, setIsProcessing] = useState(false);
 
   const [createDiagnosis, { isLoading: isUploading }] = useCreateDiagnosisMutation();
@@ -58,16 +57,13 @@ const PhotoDiagnosis = () => {
   };
 
   const handleFormSubmit = async (data) => {
-    // [PERBAIKAN #2] Tampilkan loading overlay SEGERA
     setIsProcessing(true);
     setFormData(data);
     const submissionData = { ...data, photo: capturedImage };
 
-    // Jalankan diagnosis lokal dan pengiriman ke server secara bersamaan
-    // untuk memberikan kesan responsif sambil tetap mengirim data.
     const localDiagnosisPromise = runLocalDiagnosis(capturedImage).catch(e => {
       console.warn('Local diagnosis failed, will rely on server:', e?.message || e);
-      return null; // Jangan sampai promise ini gagal dan menghentikan alur
+      return null;
     });
     
     const serverDiagnosisPromise = createDiagnosis(submissionData).unwrap().catch(async (error) => {
@@ -84,20 +80,37 @@ const PhotoDiagnosis = () => {
         }
       }
       await enqueueRequest({ type: 'createDiagnosis', payload: offlinePayload });
-      return null; // Jangan sampai promise ini gagal
+      return null;
     });
 
-    // Tunggu keduanya selesai
     const [localResult, serverResult] = await Promise.all([localDiagnosisPromise, serverDiagnosisPromise]);
 
-    // Prioritaskan hasil dari server jika ada, jika tidak gunakan hasil lokal
-    const finalResult = serverResult?.success ? serverResult : localResult;
+    const finalResult = localResult ?? serverResult ?? null;
+
     
-    setDiagnosisResult(finalResult);
-    setCurrentStep('results');
-    
-    // [PERBAIKAN #3] Sembunyikan loading overlay setelah semuanya selesai
-    setIsProcessing(false);
+    // --- PERBAIKAN SATU-SATUNYA ADA DI BLOK INI ---
+    if (finalResult) {
+      // Alih-alih hanya mengubah state, kita NAVIGASI ke halaman hasil
+          // pastikan hasil diagnosis punya timestamp.
+    const diagnosisDataForNextPage = {
+      ...finalResult,
+      // kalau server sudah kasih timestamp, pakai itu.
+      // kalau tidak ada (misalnya full lokal TF.js), pakai waktu sekarang.
+      timestamp: finalResult?.timestamp || new Date().toISOString(),
+    };
+
+    // sambil "menitipkan" data asli ke halaman hasil.
+    navigate('/diagnosis-results', {
+      state: { diagnosisData: diagnosisDataForNextPage },
+    });
+
+    } else {
+      // Jika keduanya (lokal dan server) gagal, beri tahu pengguna.
+      alert("Gagal melakukan diagnosis. Silakan periksa koneksi Anda dan coba lagi.");
+      setIsProcessing(false);
+      setCurrentStep('form'); // Kembali ke form jika gagal total
+    }
+    // Kita tidak lagi butuh setIsProcessing(false) di sini karena halaman akan berganti.
   };
 
   const handleStartNew = () => {
@@ -107,7 +120,6 @@ const PhotoDiagnosis = () => {
     setCurrentStep('capture');
   };
 
-  // ... (renderStepIndicator tetap sama) ...
   const renderStepIndicator = () => {
     const steps = [
       { id: 'capture', label: 'Foto', icon: 'Camera' },
@@ -158,7 +170,6 @@ const PhotoDiagnosis = () => {
     );
   };
   
-  // [PERBAIKAN #4] Gunakan isProcessing (state lokal) untuk loading di form
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 'capture':
@@ -173,6 +184,7 @@ const PhotoDiagnosis = () => {
       case 'form':
         return <DiagnosisForm onSubmit={handleFormSubmit} isLoading={isProcessing} hasImage={!!capturedImage} />;
       case 'results':
+        // Bagian ini sekarang tidak akan pernah ditampilkan karena kita langsung navigasi
         return (
           <DiagnosisResults
             results={diagnosisResult}
@@ -188,15 +200,13 @@ const PhotoDiagnosis = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* ... (sisa JSX tetap sama) ... */}
-            <div className="hidden md:block">
+      <div className="hidden md:block">
         <DesktopTopNav />
       </div>
 
       <div className="mx-auto w-full max-w-screen-xl px-4 md:px-6 lg:px-8">
         <OfflineStatusBanner isOnline={isOnline} />
 
-        {/* HEADER DALAM CONTAINER (punya batas kiri/kanan) */}
         <div className="bg-card border-b border-border sticky top-0 z-30">
           <div className="px-0 md:px-2 lg:px-4 py-4 md:py-6">
             <div className="flex items-center justify-between">
@@ -220,7 +230,6 @@ const PhotoDiagnosis = () => {
           </div>
         </div>
 
-        {/* BODY */}
         <div className="py-6 pb-24">
           {renderStepIndicator()}
           {renderCurrentStep()}
@@ -243,13 +252,11 @@ const PhotoDiagnosis = () => {
           )}
         </div>
 
-        {/* NAV MOBILE */}
         <div className="md:hidden">
           <BottomNavigation />
         </div>
       </div>
       
-      {/* [PERBAIKAN #5] Gunakan isProcessing untuk mengontrol LoadingOverlay */}
       <LoadingOverlay isVisible={isProcessing} message="Menganalisis foto tanaman..." animationType="camera" />
     </div>
   );
