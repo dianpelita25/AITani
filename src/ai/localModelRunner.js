@@ -1,12 +1,23 @@
 // Fokus: urus TF.js (load model + jalankan prediksi)
 // Tidak tahu apa-apa soal nama penyakit, teks, dsb.
 
-import * as tf from '@tensorflow/tfjs';
+import * as tfBase from '@tensorflow/tfjs';
 import { LOCAL_MODEL_CONFIG } from './localModelConfig';
 
 let modelPromise = null;
+let tfInstance = null;
+
+export function setTfInstance(tf) {
+  tfInstance = tf;
+  modelPromise = null; // reset supaya load ulang dengan instance baru
+}
+
+function getTf() {
+  return tfInstance || tfBase;
+}
 
 export function loadLocalModel() {
+  const tf = getTf();
   if (!modelPromise) {
     modelPromise = tf.loadLayersModel(LOCAL_MODEL_CONFIG.modelUrl);
   }
@@ -18,6 +29,7 @@ export function loadLocalModel() {
  * return: array [{ index, score }]
  */
 export async function runLocalModel(inputTensor) {
+  const tf = getTf();
   const model = await loadLocalModel();
 
   const batched = inputTensor.rank === 3
