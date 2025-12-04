@@ -87,23 +87,26 @@ const PhotoDiagnosis = () => {
 
     const finalResult = localResult ?? serverResult ?? null;
 
-    
-    // --- PERBAIKAN SATU-SATUNYA ADA DI BLOK INI ---
+    // --- PERBAIKAN: kirim juga data foto + metadata form ke halaman hasil ---
     if (finalResult) {
-      // Alih-alih hanya mengubah state, kita NAVIGASI ke halaman hasil
-          // pastikan hasil diagnosis punya timestamp.
-    const diagnosisDataForNextPage = {
-      ...finalResult,
-      // kalau server sudah kasih timestamp, pakai itu.
-      // kalau tidak ada (misalnya full lokal TF.js), pakai waktu sekarang.
-      timestamp: finalResult?.timestamp || new Date().toISOString(),
-    };
+      const imageDataUrl = capturedImage ? await fileToDataURL(capturedImage) : '';
+      const diagnosisDataForNextPage = {
+        ...finalResult,
+        timestamp: finalResult?.timestamp || new Date().toISOString(),
+        image: {
+          url: imageDataUrl,
+          cropType: data?.crop_type || 'Unknown',
+          location: {
+            latitude: data?.latitude,
+            longitude: data?.longitude,
+            address: data?.field_id || 'Lahan',
+          },
+        },
+      };
 
-    // sambil "menitipkan" data asli ke halaman hasil.
-    navigate('/diagnosis-results', {
-      state: { diagnosisData: diagnosisDataForNextPage },
-    });
-
+      navigate('/diagnosis-results', {
+        state: { diagnosisData: diagnosisDataForNextPage },
+      });
     } else {
       // Jika keduanya (lokal dan server) gagal, beri tahu pengguna.
       alert("Gagal melakukan diagnosis. Silakan periksa koneksi Anda dan coba lagi.");
