@@ -5,7 +5,7 @@ import { json } from './utils';
 import alertsFixture from '../../fixtures/alerts.fixture.json';
 
 // Fungsi helper 'seedAlertsFromFixtures' yang diambil dari index.js lama
-async function seedAlertsFromFixtures(db, fixtures = [], accountId = 'demo', userId = 'demo') {
+export async function seedAlertsFromFixtures(db, fixtures = [], accountId = 'demo', userId = 'demo') {
     if (!db || !Array.isArray(fixtures) || !fixtures.length) return 0;
     let inserted = 0;
 
@@ -28,8 +28,11 @@ async function seedAlertsFromFixtures(db, fixtures = [], accountId = 'demo', use
             pest_count: raw.pest_count ?? raw.pestCount ?? null,
         };
 
-        // Hapus data lama dengan ID yang sama, tidak peduli siapa pemiliknya
-        await db.prepare("DELETE FROM alerts WHERE id = ?").bind(norm.id).run();
+        // Hapus data lama dengan ID yang sama hanya untuk tenant terkait
+        await db
+            .prepare("DELETE FROM alerts WHERE id = ? AND account_id = ? AND user_id = ?")
+            .bind(norm.id, accountId, userId)
+            .run();
 
         await db
             .prepare(`INSERT INTO alerts (id, timestamp, pest_type, severity, description, affected_crops, location, coordinates, photo_name, photo_url, photo_key, affected_area, pest_count, account_id, user_id, created_at, created_by, updated_at, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)

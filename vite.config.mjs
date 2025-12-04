@@ -1,7 +1,21 @@
+// vite.config.mjs
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
 import tagger from "@dhiwise/component-tagger";
+
+const binHeaderPlugin = () => ({
+  name: 'ensure-bin-content-type',
+  configureServer(server) {
+    server.middlewares.use((req, res, next) => {
+      if (req?.url?.includes('/model/') && req.url.endsWith('.bin')) {
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Cache-Control', 'no-store');
+      }
+      next();
+    });
+  },
+});
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -9,7 +23,7 @@ export default defineConfig({
     outDir: "build",
     chunkSizeWarningLimit: 2000,
   },
-  plugins: [tsconfigPaths(), react(), tagger()],
+  plugins: [tsconfigPaths(), react(), tagger(), binHeaderPlugin()],
   server: {
     port: 4028,
     host: "0.0.0.0",
@@ -23,7 +37,7 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''), // Hapus /api dari path sebelum dikirim ke Worker
       },
-    }
+    },
     // --- AKHIR DARI PERBAIKAN ---
   },
   test: {

@@ -1,5 +1,7 @@
 ai_tani_kupang Tallwind - Copy
 ├── .env.txt
+├── KONTEKS_WEB - Copy.txt
+├── KONTEKS_WEB - INi saat membuat ai local offline.txt
 ├── KONTEKS_WEB.txt
 ├── README.md
 ├── README.md.txt
@@ -75,6 +77,14 @@ ai_tani_kupang Tallwind - Copy
 │   │   │       │       └── 9720582e742b2d0573c56af6f4fb8eaeeff0b0843e2eaa987d9e5501564a6d80.sqlite
 │   │   │       └── workflows
 │   │   └── tmp
+│   │       ├── bundle-54zzoV
+│   │       │   ├── checked-fetch.js
+│   │       │   ├── middleware-insertion-facade.js
+│   │       │   └── middleware-loader.entry.ts
+│   │       ├── bundle-9BVkz3
+│   │       │   ├── checked-fetch.js
+│   │       │   ├── middleware-insertion-facade.js
+│   │       │   └── middleware-loader.entry.ts
 │   │       ├── bundle-AZDTtY
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
@@ -84,6 +94,10 @@ ai_tani_kupang Tallwind - Copy
 │   │       │   ├── middleware-insertion-facade.js
 │   │       │   └── middleware-loader.entry.ts
 │   │       ├── bundle-JKtFaP
+│   │       │   ├── checked-fetch.js
+│   │       │   ├── middleware-insertion-facade.js
+│   │       │   └── middleware-loader.entry.ts
+│   │       ├── bundle-JouJ3I
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
 │   │       │   └── middleware-loader.entry.ts
@@ -99,6 +113,9 @@ ai_tani_kupang Tallwind - Copy
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
 │   │       │   └── middleware-loader.entry.ts
+│   │       ├── dev-58Fx4C
+│   │       │   ├── index.js
+│   │       │   └── index.js.map
 │   │       ├── dev-7CmjSa
 │   │       │   ├── index.js
 │   │       │   └── index.js.map
@@ -111,7 +128,13 @@ ai_tani_kupang Tallwind - Copy
 │   │       ├── dev-byeFH4
 │   │       │   ├── index.js
 │   │       │   └── index.js.map
-│   │       └── dev-pzrtOZ
+│   │       ├── dev-jRlToM
+│   │       │   ├── index.js
+│   │       │   └── index.js.map
+│   │       ├── dev-pzrtOZ
+│   │       │   ├── index.js
+│   │       │   └── index.js.map
+│   │       └── dev-qc4oOH
 │   │           ├── index.js
 │   │           └── index.js.map
 │   ├── fixtures
@@ -957,7 +980,147 @@ ai_tani_kupang Tallwind - Copy
 │   └── wrangler.toml
 ├── ambil-kode-web.mjs
 ├── buat-struktur.mjs
+├── coverage
+│   ├── ai-tani-kupang-api
+│   │   └── src
+│   │       ├── index.html
+│   │       ├── index.js.html
+│   │       └── routes
+│   │           ├── alerts.js.html
+│   │           ├── auth.js.html
+│   │           ├── dev.js.html
+│   │           ├── diagnosis.js.html
+│   │           ├── farm-tasks.js.html
+│   │           ├── health.js.html
+│   │           ├── index.html
+│   │           ├── photos.js.html
+│   │           ├── utils.js.html
+│   │           └── weather.js.html
+│   ├── base.css
+│   ├── block-navigation.js
+│   ├── index.html
+│   ├── prettify.css
+│   ├── prettify.js
+│   ├── sorter.js
+│   └── src
+│       ├── App.jsx.html
+│       ├── Routes.jsx.html
+│       ├── ai
+│       │   ├── index.html
+│       │   └── localDiagnosis.js.html
+│       ├── components
+│       │   ├── AppIcon.jsx.html
+│       │   ├── AppImage.jsx.html
+│       │   ├── ErrorBoundary.jsx.html
+│       │   ├── ScrollToTop.jsx.html
+│       │   ├── index.html
+│       │   ├── layout
+│       │   │   ├── DesktopTopNav.jsx.html
+│       │   │   ├── MobileLayout.jsx.html
+│       │   │   └── index.html
+│       │   └── ui
+│       │       ├── BottomNavigation.jsx.html
+│       │       ├── Button.jsx.html
+│       │       ├── Checkbox.jsx.html
+│       │       ├── Input.jsx.html
+│       │       ├── LoadingOverlay.jsx.html
+│       │       ├── OfflineStatusBanner.jsx.html
+│       │       ├── Select.jsx.html
+│       │       ├── ShareActionSheet.jsx.html
+│       │       └── index.html
+│       ├── index.html
+│       ├── index.jsx.html
+│       ├── offline
+│       │   ├── db.js.html
+│       │   ├── index.html
+│       │   ├── queueService.js.html
+│       │   └── replayClient.js.html
+│       ├── pages
+│       │   ├── NotFound.jsx.html
+│       │   ├── community-alerts
+│       │   │   ├── components
+│       │   │   │   ├── AlertCard.jsx.html
+│       │   │   │   ├── AlertDetailModal.jsx.html
+│       │   │   │   ├── AlertFilters.jsx.html
+│       │   │   │   ├── CommunityMap.jsx.html
+│       │   │   │   ├── ReportPestModal.jsx.html
+│       │   │   │   └── index.html
+│       │   │   ├── index.html
+│       │   │   └── index.jsx.html
+│       │   ├── diagnosis-history
+│       │   │   ├── components
+│       │   │   │   ├── HistoryCard.jsx.html
+│       │   │   │   └── index.html
+│       │   │   ├── index.html
+│       │   │   └── index.jsx.html
+│       │   ├── diagnosis-results
+│       │   │   ├── components
+│       │   │   │   ├── ActionButtons.jsx.html
+│       │   │   │   ├── CropImageDisplay.jsx.html
+│       │   │   │   ├── DiagnosisCard.jsx.html
+│       │   │   │   ├── DiagnosisHeader.jsx.html
+│       │   │   │   ├── EnvironmentalFactors.jsx.html
+│       │   │   │   ├── OfflineIndicator.jsx.html
+│       │   │   │   ├── RecommendationCard.jsx.html
+│       │   │   │   └── index.html
+│       │   │   ├── index.html
+│       │   │   └── index.jsx.html
+│       │   ├── farming-calendar
+│       │   │   ├── components
+│       │   │   │   ├── AddEventModal.jsx.html
+│       │   │   │   ├── CalendarGrid.jsx.html
+│       │   │   │   ├── CalendarHeader.jsx.html
+│       │   │   │   ├── EventDetailsPanel.jsx.html
+│       │   │   │   ├── EventFilterBar.jsx.html
+│       │   │   │   ├── MobileCalendarView.jsx.html
+│       │   │   │   └── index.html
+│       │   │   ├── index.html
+│       │   │   └── index.jsx.html
+│       │   ├── forgot-password
+│       │   │   ├── index.html
+│       │   │   └── index.jsx.html
+│       │   ├── home-dashboard
+│       │   │   ├── components
+│       │   │   │   ├── CommunityAlertSnippet.jsx.html
+│       │   │   │   ├── NavigationCard.jsx.html
+│       │   │   │   ├── QuickActions.jsx.html
+│       │   │   │   ├── WelcomeHeader.jsx.html
+│       │   │   │   └── index.html
+│       │   │   ├── index.html
+│       │   │   └── index.jsx.html
+│       │   ├── index.html
+│       │   ├── login
+│       │   │   ├── index.html
+│       │   │   └── index.jsx.html
+│       │   ├── photo-diagnosis
+│       │   │   ├── components
+│       │   │   │   ├── CameraInterface.jsx.html
+│       │   │   │   ├── DiagnosisForm.jsx.html
+│       │   │   │   ├── DiagnosisResults.jsx.html
+│       │   │   │   └── index.html
+│       │   │   ├── index.html
+│       │   │   └── index.jsx.html
+│       │   ├── register
+│       │   │   ├── index.html
+│       │   │   └── index.jsx.html
+│       │   └── reset-password
+│       │       ├── index.html
+│       │       └── index.jsx.html
+│       ├── services
+│       │   ├── alertsApi.js.html
+│       │   ├── api.js.html
+│       │   ├── authApi.js.html
+│       │   ├── authSlice.js.html
+│       │   ├── diagnosisApi.js.html
+│       │   ├── farmTasksApi.js.html
+│       │   ├── index.html
+│       │   └── weatherApi.js.html
+│       └── utils
+│           ├── cn.js.html
+│           ├── index.html
+│           └── normalizePhotoUrl.js.html
 ├── docs
+│   ├── PROJECT_STRUCTURE.md
 │   ├── WOW-RUNBOOK.md
 │   ├── demo-assets
 │   └── testing.md
@@ -968,17 +1131,47 @@ ai_tani_kupang Tallwind - Copy
 ├── public
 │   ├── assets
 │   │   └── images
+│   ├── libs
+│   │   └── tf.min.js
 │   ├── manifest.json
 │   ├── model
-│   │   └── README.txt
+│   │   ├── README.txt
+│   │   ├── ai_tani_corn_disease.tflite
+│   │   ├── group1-shard1of1.bin
+│   │   ├── group1-shard1of2.bin
+│   │   ├── group1-shard2of2.bin
+│   │   ├── model.json
+│   │   ├── old_model
+│   │   │   ├── group1-shard1of3.bin
+│   │   │   ├── group1-shard2of3.bin
+│   │   │   ├── group1-shard3of3.bin
+│   │   │   ├── model.json
+│   │   │   └── model.original.json
+│   │   └── old_model.1
+│   │       ├── README.txt
+│   │       ├── ai_tani_corn_disease.tflite
+│   │       ├── group1-shard1of2.bin
+│   │       ├── group1-shard2of2.bin
+│   │       └── model.json
 │   └── robots.txt
 ├── scripts
+│   ├── debug-tf.mjs
+│   ├── patch-model.mjs
 │   └── simulate.mjs
 ├── src
 │   ├── App.jsx
 │   ├── Routes.jsx
 │   ├── ai
-│   │   └── localDiagnosis.js
+│   │   ├── __tests__
+│   │   │   └── modelArtifacts.test.js
+│   │   ├── aiTaniTflite.ts
+│   │   ├── diseaseCatalog.js
+│   │   ├── localDiagnosis.js
+│   │   ├── localDiagnosisEngine.js
+│   │   ├── localLabelConfig.js
+│   │   ├── localModelConfig.js
+│   │   ├── localModelRunner.js
+│   │   └── modelWeights.js
 │   ├── components
 │   │   ├── AppIcon.jsx
 │   │   ├── AppImage.jsx
@@ -1059,6 +1252,8 @@ ai_tani_kupang Tallwind - Copy
 │   │   └── reset-password
 │   │       └── index.jsx
 │   ├── services
+│   │   ├── __tests__
+│   │   │   └── api.test.jsx
 │   │   ├── alertsApi.js
 │   │   ├── api.js
 │   │   ├── authApi.js
@@ -1077,4 +1272,5 @@ ai_tani_kupang Tallwind - Copy
 │       └── normalizePhotoUrl.js
 ├── struktur_proyek.txt
 ├── tailwind.config.js
+├── temp_model.json
 └── vite.config.mjs

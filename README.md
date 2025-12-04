@@ -1,368 +1,246 @@
-﻿# Ai Tani Kupang – React App
+# AI Tani Kupang
 
-A modern React + Vite app with offline-aware reporting, Cloudflare Worker API, and clean UI powered by Tailwind.
+> Platform pendamping petani yang memadukan diagnosis hama berbasis AI, kalender tanam pintar, serta pelaporan komunitas dengan dukungan offline dan backend Cloudflare Worker.
 
-## 🚀 Highlights
+## Status perkembangan (Q4 2025)
 
-- **React 18 + Vite** – super fast DX & HMR  
-- **Redux Toolkit + RTK Query** – state & data fetching
-- **React Router v6** – routing
-- **Tailwind CSS** – utility-first styling
-- **Framer Motion** – subtle animations
-- **React Hook Form** – lean forms
-- **Recharts / (D3 where needed)** – charts
-- **Jest + RTL** – testing setup
-- **Offline queue** – create reports while offline, sync later
-- **Cloudflare Workers** – API with **D1** (SQLite) & **R2** (object storage)
-- **Image loading without CORS** – custom `<AppImage />` (no fetch/HEAD)
+- ✅ Dashboard, Photo Diagnosis, Community Alerts, Farming Calendar, Riwayat Diagnosis, dan seluruh alur auth (login/register/reset) sudah jalan dengan RTK Query + Redux.
+- ✅ Sinkronisasi offline → online berfungsi: antrean IndexedDB menyimpan alert/diagnosis/farm task lalu otomatis dieksekusi ketika token login valid kembali.
+- ✅ Backend Cloudflare Worker telah memiliki route lengkap (alerts, diagnosis, farm-tasks, weather advice, auth, photos proxy, dev seeding) plus cron BMKG → KV.
+- ✅ Model TensorFlow.js (layers) bisa dipanggil dari browser (`src/ai/localDiagnosis.js`) maupun diuji lewat Node (`scripts/debug-tf.mjs`).
+- 🟡 Refactor AI lokal sedang berlangsung: modul baru (`src/ai/localModelConfig.js`, `localLabelConfig.js`, `localModelRunner.js`, `localDiagnosisEngine.js`, `diseaseCatalog.js`) sudah ada namun belum sepenuhnya dipakai UI.
+- 🟡 Koleksi label penyakit (`DISEASE_LABELS`, `UI_TEMPLATES`) baru mencakup sedikit kelas contoh—perlu disesuaikan dengan output model final.
+- 🟡 Infrastruktur TFLite Web API client tersedia (lihat `node_modules/@tensorflow/tfjs-tflite/...`) tetapi belum dipakai; saat ini tetap memakai TF.js standard.
 
----
+## Fitur utama
 
-## 📋 Prerequisites
+- **Diagnosis foto hybrid** - proses foto daun melalui TensorFlow.js di browser (`src/ai/localDiagnosis.js`) lalu kirim ke API agar hasil server dan lokal saling melengkapi.
+- **Perencanaan & riwayat** - halaman Kalender, Riwayat Diagnosis, dan Dashboard memanfaatkan RTK Query + IndexedDB agar tugas tetap tersimpan walau tanpa sinyal.
+- **Komunitas & peta** - halaman Community Alerts menampilkan daftar + peta Leaflet, filter dinamis, serta modal pelaporan cepat dengan upload foto ke R2.
+- **Offline-first** - antrean `src/offline/queueService.js` menyimpan aksi (alert, diagnosis, farm task) di IndexedDB kemudian disinkron otomatis via `BroadcastChannel`.
+- **API Cloudflare Worker** - service `ai-tani-kupang-api/src/index.js` memakai Hono, D1 (SQL), R2 (foto), KV (cache), dan cron untuk saran cuaca BMKG.
+- **Otomasi cuaca** - cron Worker mengambil prakiraan, menyimpannya di KV, dan menampilkan rekomendasi di Kalender.
+- **Testing siap liputan** - Vitest + Testing Library mencakup utilitas, komponen krusial, serta Worker route (`docs/testing.md`).
 
-- Node.js ≥ 18 (disarankan)
-- npm atau yarn
-- Cloudflare Wrangler (`npm i -g wrangler`, optional untuk dev API)
+## Ekspektasi & target berikutnya
 
----
+- **Integrasi Engine AI baru**: ganti implementasi `runLocalDiagnosis` agar memanfaatkan modul modular (config/label/catalog) sehingga mapping UI mudah dirawat.
+- **Lengkapi kamus penyakit**: sinkronkan `DISEASE_LABELS` dan `UI_TEMPLATES` dengan daftar kelas sebenarnya (ambil dari metadata training + `public/model/model.json`).
+- **Optimalkan pipeline foto**: tambahkan kompresi sebelum antrean offline (sesuai runbook) dan dukungan preview hasil lokal + server bersamaan.
+- **Telemetry & logging**: tambahkan instrumentation ringan (mis. event toast/log) agar debugging offline queue & TF.js lebih mudah ketika dibawa demo di lapangan.
+- **Deploy Cloudflare Worker**: hubungkan binding produksi (DB/R2/KV) dan environment secret sehingga crew bisa melakukan UAT di URL publik.
 
-## 🛠️ Install & Run (Dev)
+## Arsitektur dalam 1 menit
 
-### 1) Frontend (Vite)
-```bash
-npm install
-npm run dev
-# FE will serve at http://localhost:xxxx (lihat console)
+- **Frontend**: React 18 + Vite + Tailwind. State global memakai Redux Toolkit + RTK Query (`src/services/*`). Rute utama ada di `src/Routes.jsx` (Dashboard, Photo Diagnosis, Community Alerts, Farming Calendar, Login/Reset, dsb).
+- **AI lokal**: `src/ai/localDiagnosis.js` memuat TF.js 4.22.0 secara dinamis, menambal layer augmentasi (`RandomFlip/Rotation`), lalu membaca model `public/model/model.json`. `scripts/debug-tf.mjs` membantu validasi struktur model sebelum dibagikan.
+- **Offline layer**: `src/offline/db.js` mendefinisikan IndexedDB, `queueService.js` mengatur antrean, `replayClient.js` menjadi adaptor REST ketika koneksi kembali normal.
+- **Backend**: `ai-tani-kupang-api/` menjalankan Hono di Cloudflare Worker. `wrangler.toml` mendeskripsikan D1 (`DB`), R2 (`R2`), KV (`KV`), dan cron. Routes modular berada di `src/routes/*.js`.
+- **Dokumentasi & skrip**: `docs/` berisi runbook + panduan testing, `scripts/` memuat utilitas debugging TF, sementara `docs/demo-assets/` menyediakan sampel foto untuk dev.
+
+## Prasyarat
+
+- Node.js 18+ dan `pnpm` 9 (lihat `packageManager` pada `package.json`).
+- Cloudflare Wrangler 3.70+ untuk menjalankan Worker secara lokal (`npm i -g wrangler`).
+- Akun Cloudflare dengan akses D1, R2, dan KV (untuk deployment). Mode `--local` cukup untuk dev.
+- Opsional: akses geolokasi browser (untuk fitur Nearby) dan kamera (Photo Diagnosis).
+
+## Setup cepat
+
+1. **Salin variabel lingkungan frontend**
+   ```bash
+   cp .env.txt .env
+   # set VITE_API_BASE_URL=http://127.0.0.1:8787 (atau origin Worker Anda)
+   ```
+
+2. **Install dependensi**
+   ```bash
+   pnpm install
+   cd ai-tani-kupang-api && pnpm install
+   ```
+
+3. **Provision resource Cloudflare (lokal)**
+   ```bash
+   cd ai-tani-kupang-api
+   npx wrangler d1 migrations apply ai-tani-kupang-web --local
+   # Simpan file ke R2 lokal dengan flag --local nanti saat wrangler dev berjalan
+   ```
+   Pastikan `wrangler.toml` memiliki binding `DB`, `R2`, `KV`, `d1_databases`, dan `r2_buckets` seperti repo.
+
+4. **Jalankan Worker API**
+   ```bash
+   cd ai-tani-kupang-api
+   npx wrangler dev --local --persist-to ./tmp
+   # default akan berjalan di http://127.0.0.1:8787
+   ```
+
+5. **Jalankan frontend Vite**
+   ```bash
+   pnpm dev
+   # aplikasi tersedia di http://localhost:4028 (lihat log terminal)
+   ```
+
+6. **Seed data demo (opsional namun membantu)**
+   ```bash
+   curl -X POST http://127.0.0.1:8787/api/dev/seed-alerts
+   npx wrangler r2 object put aitaniweb-photos/demo/Daun_Jagung.png \
+     --file docs/demo-assets/Daun_Jagung.png --local
+   ```
+   Gunakan endpoint `/photos/:key` untuk memastikan foto diambil dari R2.
+
+7. **Validasi model AI lokal (opsional)**
+   ```bash
+   node scripts/debug-tf.mjs
+   ```
+   Skrip ini memuat `public/model/*`, menormalkan `inbound_nodes`, kemudian menjalankan `tf.loadLayersModel` pada Node.js agar error terlihat lebih awal.
+
+## Skrip pnpm yang tersedia
+
+| Perintah | Fungsi |
+| --- | --- |
+| `pnpm dev` | Menjalankan Vite (`--host 0.0.0.0 --port 4028`). |
+| `pnpm build` | Build produksi Vite + source map (`dist/`). |
+| `pnpm serve` | Preview hasil build secara lokal. |
+| `pnpm typecheck` | Pemeriksaan tipe ringan (JSDoc). |
+| `pnpm test` | Menjalankan Vitest sekali + laporan cakupan v8 (`coverage/`). |
+| `pnpm test:watch` | Vitest watch mode. |
+| `pnpm test:ui` | Vitest UI runner. |
+| `cd ai-tani-kupang-api && npx wrangler dev` | Menjalankan Worker API lokal dengan D1/R2/KV. |
+
+## Struktur proyek
+
+```
+.
+|- src/
+|  |- ai/                # TensorFlow.js loader & bobot lokal
+|  |- components/        # UI reusable + komponen layout
+|  |- offline/           # IndexedDB, antrean, replay client
+|  |- pages/             # Halaman utama (Dashboard, Photo Diagnosis, Alerts, dll)
+|  `- services/          # RTK Query services (alerts, diagnosis, farm tasks, auth)
+|- public/model/         # Model TF.js (model.json + *.bin)
+|- scripts/debug-tf.mjs  # Utility cek konsistensi model
+|- docs/                 # testing.md, WOW-RUNBOOK, demo assets
+|- ai-tani-kupang-api/
+|  |- migrations/        # Skema D1
+|  |- src/routes/        # Handler Hono (alerts, auth, farm-tasks, dll)
+|  `- wrangler.toml      # Binding DB/R2/KV + cron
+`- pnpm-lock.yaml
 ```
 
-### 2) API (Cloudflare Worker, local)
-Di repo API kamu, jalankan:
-```bash
-# opsional bila ada migrasi
-npx wrangler d1 migrations apply ai-tani-kupang-web --local
+## AI lokal & model TensorFlow.js
 
-# jalankan worker + D1 + R2 lokal
-npx wrangler dev
-# default di http://127.0.0.1:8787
-```
+- `runLocalDiagnosis(imageFile)` akan:
+  1. Memuat skrip TF.js 4.22.0 dari CDN jika belum tersedia.
+  2. Registrasi layer dummy `RandomFlip/Rotation` supaya model Keras dapat diload walau augmentation tidak ada di browser.
+  3. Mengambil `public/model/model.json` + weight manifest melalui `import modelUrl from '/model/model.json?url'` agar cache-busting otomatis.
+  4. Mengubah foto menjadi tensor (resize 224x224, normalisasi), menjalankan `model.predict`, lalu memetakan label + rekomendasi.
+- Bila TF.js gagal (timeout/unsupported), fungsi mengembalikan mock diagnosis sehingga UI tetap memberi feedback.
+- Gunakan `scripts/debug-tf.mjs` setiap kali mengganti `public/model/*` atau `src/ai/modelWeights.js` untuk memastikan manifest valid.
+- Untuk mengganti model: timpa isi `public/model/`, commit file besar via Git LFS bila diperlukan, lalu uji lewat `pnpm dev` dan skrip debug di atas.
 
-Aplikasi FE memanggil API pada origin Worker lokal (contoh: `http://127.0.0.1:8787/api/alerts`). Jika kamu memakai proxy Vite untuk `/api`, pastikan set di `vite.config.js`.
+### Modul AI baru (sedang dalam pengerjaan)
 
----
+- `src/ai/localModelConfig.js` - konfigurasi tunggal untuk ukuran input, threshold, topK.
+- `src/ai/localLabelConfig.js` - mapping index output → kode penyakit + template narasi.
+- `src/ai/localModelRunner.js` - fokus memuat TF.js + menjalankan model, tidak tahu soal UI.
+- `src/ai/localDiagnosisEngine.js` - menyusun hasil ramah petani (primary diagnosis + alternatif).
+- `src/ai/diseaseCatalog.js` - kamus label → teks (confidence bucket, severity default).
+- Status: modul-modul ini siap dipakai tetapi `src/ai/localDiagnosis.js` masih memakai versi lama; berikutnya perlu digabung agar UI cukup konsumsi satu bentuk data konsisten.
 
-## Dev Demo Checklist (5 langkah)
+## Offline-first & sinkronisasi
 
-1. **Wrangler dev** – `npx wrangler dev` (jendela ini jangan ditutup supaya D1/R2 lokal hidup).
-2. **Upload foto contoh ke R2** – gunakan aset `docs/demo-assets/Daun_Jagung.png` lalu jalankan  
-   `npx wrangler r2 object put aitaniweb-photos/uploads/folder%20A/Daun%20Jagung.png --file docs/demo-assets/Daun_Jagung.png`.
-3. **Seed alert** – `curl -X POST http://127.0.0.1:8787/api/dev/seed-alerts?table=alerts`  
-   (opsional: kirim payload kustom dengan `-d @ai-tani-kupang-api/fixtures/alerts.fixture.json`).
-4. **Frontend dev** – `npm run dev` lalu buka `http://localhost:4028/community-alerts`.
-5. **Verifikasi** – buka salah satu alert hingga modal, cek request `GET /api/photos/uploads/folder%20A/Daun%20Jagung.png` → 200. Coba hapus/ubah `photoKey` untuk memastikan fallback tidak crash.
+- `src/offline/db.js` membuat IndexedDB bernama `aitani-web` dengan object store `request-queue` dan `events`. Data dipartisi berdasarkan tenant (`accountId:userId`) dari `localStorage`.
+- `enqueueRequest` menyimpan permintaan (create alert/diagnosis/farm task) sebagai JSON, menyiarkan `queue-updated` lewat `BroadcastChannel`.
+- `App.jsx` memantau status online dan hanya menjalankan `retryQueue` ketika koneksi **dan** sesi login tersedia (`selectIsAuthenticated`).
+- `OfflineStatusBanner` + `NetworkStatusPill` memberi konteks pengguna jika ada data tertunda.
+- `src/offline/replayClient.js` memastikan antrian memanggil endpoint sesuai base URL (`VITE_API_BASE_URL`) tanpa double slash.
 
----
+## API Cloudflare Worker (ringkasan)
 
-## 🔧 Konfigurasi yang Penting
+Semua endpoint berada di `ai-tani-kupang-api/src/routes`. Prefix `/api` otomatis disisipkan oleh Worker (`src/index.js`).
 
-### 1) Penanganan Gambar (tanpa CORS)
-Kita pakai komponen ringan **`AppImage`** yang **tidak** melakukan `fetch()`/`HEAD` ke R2, jadi tidak memicu CORS. Fallback berjalan via `onError`.
+| Method & Path | Deskripsi | Catatan |
+| --- | --- | --- |
+| `GET /health` | Pemeriksaan kesehatan Worker + info commit. | Publik. |
+| `POST /auth/register` | Membuat akun baru. | Publik (menulis ke D1). |
+| `POST /auth/login` | Mengembalikan JWT (`Authorization: Bearer`). | Publik. |
+| `POST /auth/forgot-password` | Menyimpan token reset dan mengirim email via Resend. | Butuh `RESEND_API_KEY`. |
+| `POST /auth/reset-password` | Memvalidasi token reset lalu perbarui password. | Publik. |
+| `GET /alerts` | Daftar alert komunitas. | Auth wajib. |
+| `POST /alerts` | Membuat alert baru + upload foto ke R2. | Auth + batas ukuran `MAX_UPLOAD_MB`. |
+| `DELETE /alerts/:id` | Menghapus alert milik user. | Auth. |
+| `GET /farm-tasks` | Menarik tugas antara `from` dan `to`. | Auth; menyaring `account_id/user_id`. |
+| `POST /farm-tasks` | Membuat tugas baru. | Auth; payload ID berasal dari FE (UUID). |
+| `PATCH /farm-tasks/:id` | Pembaruan status (pending/completed). | Auth. |
+| `DELETE /farm-tasks/:id` | Soft delete tugas. | Auth. |
+| `GET /diagnosis` | Riwayat diagnosis tersimpan. | Auth. |
+| `POST /diagnosis` | Menyimpan hasil diagnosis + metadata foto (ditautkan ke R2). | Auth. |
+| `GET /photos/:key+` | Streaming foto dari R2 (tanpa CORS). | Auth. |
+| `GET /weather/advice` | Membaca cache KV untuk rekomendasi cuaca terbaru. | Auth. |
+| `POST /dev/seed-alerts` | Mengisi D1 memakai fixture `fixtures/alerts.fixture.json`. | Gunakan hanya di dev. |
 
-**File**: `src/components/AppImage.jsx`  
-**Fallback**: letakkan gambar fallback di `public/assets/images/no_image.png`.
+Tambahan: cron Worker (lihat `wrangler.toml`) menjalankan `scheduled()` setiap pukul 12:00 WIB untuk menyegarkan cache weather ke KV key `notif:demo`.
 
-### 2) Normalisasi URL Foto (hindari double-encode)
-Beberapa nama file (mis. dengan spasi) bisa muncul sebagai `WhatsApp%2520Image...` (double-encoded).  
-Di **`AlertDetailModal.jsx`** ada helper `normalizePhotoUrl()` yang:
-- `decodeURIComponent()` **sekali** bila menemukan `%25`
-- mengganti spasi literal menjadi `%20`
+## Variabel lingkungan & binding
 
-> Hasilnya: URL valid ke R2 (tidak 404), foto tampil di **card** & **detail modal**.
+### Frontend (`.env`)
 
-### 3) Mapper API → FE
-Di **`src/services/alertsApi.js`**:
-- `photo_url` dari API selalu dipetakan menjadi **`photoUrl`**
-- field snake_case lain dipetakan ke camelCase
-- `coordinates` diparse aman (string/obj)
+| Kunci | Fungsi | Default |
+| --- | --- | --- |
+| `VITE_API_BASE_URL` | Origin Worker tanpa suffix `/api`. Dipakai RTK Query & offline replay. | `http://127.0.0.1:8787` |
 
-RTK Query endpoint:
-- `GET /api/alerts` → `useGetAlertsQuery`
-- `POST /api/alerts` (multipart, mendukung replay offline via antrean)
+### Worker (atur melalui `wrangler.toml` atau `wrangler secret put`)
 
-### 4) Offline Queue
-Jika submit gagal (offline), payload (termasuk foto sebagai **DataURL**) diantrikan di **`offline/queueService`** dan akan disinkron otomatis saat online.
+| Kunci | Fungsi |
+| --- | --- |
+| `JWT_SECRET` | Kunci penandatanganan JWT login. |
+| `ALLOWED_ORIGIN` | CSV origin yang boleh melakukan request (contoh `http://localhost:4028`). |
+| `MAX_UPLOAD_MB` | Batas ukuran file upload saat membuat alert. |
+| `ENV_NAME` | Label environment untuk log/health. |
+| `PUBLIC_R2_BASE_URL` | Base URL R2 publik (untuk merakit link foto). |
+| `R2_PUBLIC_BUCKET_PATH` | Nama bucket publik (fallback). |
+| `R2_LOCAL_BASE` | Origin Miniflare R2 lokal (`http://127.0.0.1:8787/r2`). |
+| `R2_BUCKET` | Nama bucket default saat membuat URL lokal. |
+| `RESEND_API_KEY` | API key Resend untuk email reset password. |
 
----
+### Cloudflare binding
 
-## 📁 Project Structure (ringkas)
+Defined pada `wrangler.toml`:
 
-```
-ai_tani_kupang Tallwind
-├── .env.txt
-├── KONTEKS_WEB.txt
-├── README.md
-├── README.md.txt
-├── ai-tani-kupang-api
-│   ├── .wrangler
-│   │   ├── state
-│   │   │   └── v3
-│   │   │       ├── cache
-│   │   │       │   └── miniflare-CacheObject
-│   │   │       ├── d1
-│   │   │       │   └── miniflare-D1DatabaseObject
-│   │   │       │       └── 5ae9da099f6cfd381eabd0dd98dea07b3919d6ef80713ba9d8802efef8b9d036.sqlite
-│   │   │       ├── kv
-│   │   │       │   └── miniflare-KVNamespaceObject
-│   │   │       ├── r2
-│   │   │       │   ├── aitaniweb-photos
-│   │   │       │   │   └── blobs
-│   │   │       │   │       ├── 145e90cb043214655da53ae60f9c3c2009de4b6be3a999bba7a27f84cb323fc1000001994137d690      
-│   │   │       │   │       ├── 17e15f4549191400f985a15033fff5060a3e0a9158b89bcbe3577ed28653b962000001993b890340      
-│   │   │       │   │       ├── 253d0cdf8758e01f6e554a0aba8b3db84c3e2e88baa9863caa81acbd91e623320000019941135d8f      
-│   │   │       │   │       ├── 276d78488906b8780221d127ec03380b3f85d0ddf71984b8764b4e54f46a9122000001993d2bdef6      
-│   │   │       │   │       ├── 2cab905cd4dbe0460feed4f34948ea1ec7622b5350f937ead18c80737b86180b000001993ce849c9      
-│   │   │       │   │       ├── 2f8339ab856fcf0492eaeb8c384a711d06a84cc5eaa9dcf85e54c489bd8e08b5000001994112fbe6      
-│   │   │       │   │       ├── 346334ec54382334f42d89a8bf4936d9c8bffb8ccc3c76b3494bb18b46a17704000001993c445ddd      
-│   │   │       │   │       ├── 4c511463f771697455501e31ea877679e92a5093f34e7e991bd14dee8606cb4e000001994109c8a8      
-│   │   │       │   │       ├── 4dd517d5067101f7b8c5456d2421002a6e823aac826a7ccbf031837427315971000001993d32ee9e      
-│   │   │       │   │       ├── 53b24ebdd1127dfdfefc42366cdc849f655b13ab7eb34316404c75e051a2e6d7000001993c46d22e      
-│   │   │       │   │       ├── 5f56014dbb5e8615e1d5187f3ba6bf7c9f0c240c71ca211e15ac53bd72f86b3f000001993c47f3f8      
-│   │   │       │   │       ├── 7f31aeee0a01ea2ea1dcb113eb50456be7044a2efbf95ccd17c37b9f8855938b0000019941489186      
-│   │   │       │   │       ├── 7fa5951b56477c85244f82055e414022f5ed79edacf46bf4ab567dca5136df1f000001993d0119d2      
-│   │   │       │   │       ├── 9e682555d64f8b0134e00a509eefe12dbde07847b668b998769d00b54ba39609000001993ccf6672      
-│   │   │       │   │       ├── a250c881bec64b10d3e9d2a532f01afe488974d5268fdac3c940fa51e375e93b000001994113f0c0      
-│   │   │       │   │       ├── a36d44fe74f8355f466a3b592d40e4266fefd6cbb1f91ccb68d9eb175e1e27d60000019940b772f5      
-│   │   │       │   │       ├── ac4e9c3eb382058d1ec7de4caa1c8f5dc7b27c10e2e6a224f39eecf281bd5029000001993b67f052      
-│   │   │       │   │       ├── bcfd32ade40220407d8de3b167dd369a9d505f6fe7e95eb68de7e0dd2eeb3e7c0000019940fee848      
-│   │   │       │   │       ├── ce356431fc5033347f0b87b0f880a58a183bec82a94141e65a27f1d4eee2da010000019937b79fba      
-│   │   │       │   │       ├── e5a16bb6a1c5e4c352b102fa6c4a319587ffb00d1e3bd963430eabaacb632be0000001993969131b      
-│   │   │       │   │       ├── e969717f15c765e981c928d7907c51c53e9023a29e71b5643fa1f48e98d425c30000019941111e42      
-│   │   │       │   │       ├── fe137531195cffad3400a28343216561be8aad29c721a99e57f2e76d0660bda3000001993d3f689e      
-│   │   │       │   │       └── ff95c365c0ae996938de2aa8ad5384fbe7a030460d5cefde6abe4c85fd3bceb1000001993b117a86      
-│   │   │       │   └── miniflare-R2BucketObject
-│   │   │       │       └── 9720582e742b2d0573c56af6f4fb8eaeeff0b0843e2eaa987d9e5501564a6d80.sqlite
-│   │   │       └── workflows
-│   │   └── tmp
-│   │       ├── bundle-CeSID1
-│   │       │   ├── checked-fetch.js
-│   │       │   ├── middleware-insertion-facade.js
-│   │       │   └── middleware-loader.entry.ts
-│   │       ├── bundle-JKtFaP
-│   │       │   ├── checked-fetch.js
-│   │       │   ├── middleware-insertion-facade.js
-│   │       │   └── middleware-loader.entry.ts
-│   │       ├── bundle-R5PBgf
-│   │       │   ├── checked-fetch.js
-│   │       │   ├── middleware-insertion-facade.js
-│   │       │   └── middleware-loader.entry.ts
-│   │       ├── bundle-Wv8d8e
-│   │       │   ├── checked-fetch.js
-│   │       │   ├── middleware-insertion-facade.js
-│   │       │   └── middleware-loader.entry.ts
-│   │       ├── bundle-rJpwiW
-│   │       │   ├── checked-fetch.js
-│   │       │   ├── middleware-insertion-facade.js
-│   │       │   └── middleware-loader.entry.ts
-│   │       ├── dev-7CmjSa
-│   │       │   ├── index.js
-│   │       │   └── index.js.map
-│   │       ├── dev-8dZu5J
-│   │       │   ├── index.js
-│   │       │   └── index.js.map
-│   │       ├── dev-byeFH4
-│   │       │   ├── index.js
-│   │       │   └── index.js.map
-│   │       └── dev-qPJItj
-│   │           ├── index.js
-│   │           └── index.js.map
-│   ├── local_schema.sql
-│   ├── migrations
-│   │   ├── 001_schema.sql
-│   │   ├── 002_align_with_remote.sql
-│   │   ├── 003_add_photo_url.sql
-│   │   ├── 004_add_alert_extra_fields.sql
-│   │   ├── 005_refresh_alerts_view.sql
-│   │   └── 006_add_photo_key.sql
-│   ├── node_modules
-│   │   ├── .cache
-│   │   │   └── wrangler
-│   │   │       └── wrangler-account.json
-│   │   ├── .mf
-│   │   │   └── cf.json
-│   │   └── .package-lock.json
-│   ├── package.json
-│   ├── remote_schema.sql
-│   ├── src
-│   │   └── index.js
-│   ├── tmp
-│   │   └── out.txt
-│   └── wrangler.toml
-├── ambil-kode-web.mjs
-├── buat-struktur.mjs
-├── docs
-│   └── WOW-RUNBOOK.md
-├── index.html
-├── jsconfig.json
-├── package.json
-├── postcss.config.js
-├── public
-│   ├── assets
-│   │   └── images
-│   ├── manifest.json
-│   ├── model
-│   │   └── README.txt
-│   └── robots.txt
-├── scripts
-│   └── simulate.mjs
-├── src
-│   ├── App.jsx
-│   ├── Routes.jsx
-│   ├── ai
-│   │   └── localDiagnosis.js
-│   ├── components
-│   │   ├── AppIcon.jsx
-│   │   ├── AppImage.jsx
-│   │   ├── ErrorBoundary.jsx
-│   │   ├── ScrollToTop.jsx
-│   │   ├── layout
-│   │   │   ├── DesktopTopNav.jsx
-│   │   │   └── MobileLayout.jsx
-│   │   └── ui
-│   │       ├── BottomNavigation.jsx
-│   │       ├── Button.jsx
-│   │       ├── Checkbox.jsx
-│   │       ├── Input.jsx
-│   │       ├── LoadingOverlay.jsx
-│   │       ├── OfflineStatusBanner.jsx
-│   │       ├── Select.jsx
-│   │       └── ShareActionSheet.jsx
-│   ├── index.jsx
-│   ├── offline
-│   │   ├── db.js
-│   │   ├── queueService.js
-│   │   └── replayClient.js
-│   ├── pages
-│   │   ├── NotFound.jsx
-│   │   ├── community-alerts
-│   │   │   ├── components
-│   │   │   │   ├── AlertCard.jsx
-│   │   │   │   ├── AlertDetailModal.jsx
-│   │   │   │   ├── AlertFilters.jsx
-│   │   │   │   ├── CommunityMap.jsx
-│   │   │   │   └── ReportPestModal.jsx
-│   │   │   └── index.jsx
-│   │   ├── diagnosis-history
-│   │   │   ├── components
-│   │   │   │   └── HistoryCard.jsx
-│   │   │   └── index.jsx
-│   │   ├── diagnosis-results
-│   │   │   ├── components
-│   │   │   │   ├── ActionButtons.jsx
-│   │   │   │   ├── CropImageDisplay.jsx
-│   │   │   │   ├── DiagnosisCard.jsx
-│   │   │   │   ├── DiagnosisHeader.jsx
-│   │   │   │   ├── EnvironmentalFactors.jsx
-│   │   │   │   ├── OfflineIndicator.jsx
-│   │   │   │   └── RecommendationCard.jsx
-│   │   │   └── index.jsx
-│   │   ├── farming-calendar
-│   │   │   ├── components
-│   │   │   │   ├── AddEventModal.jsx
-│   │   │   │   ├── CalendarGrid.jsx
-│   │   │   │   ├── CalendarHeader.jsx
-│   │   │   │   ├── EventDetailsPanel.jsx
-│   │   │   │   ├── EventFilterBar.jsx
-│   │   │   │   └── MobileCalendarView.jsx
-│   │   │   └── index.jsx
-│   │   ├── home-dashboard
-│   │   │   ├── components
-│   │   │   │   ├── CommunityAlertSnippet.jsx
-│   │   │   │   ├── NavigationCard.jsx
-│   │   │   │   ├── QuickActions.jsx
-│   │   │   │   └── WelcomeHeader.jsx
-│   │   │   └── index.jsx
-│   │   └── photo-diagnosis
-│   │       ├── components
-│   │       │   ├── CameraInterface.jsx
-│   │       │   ├── DiagnosisForm.jsx
-│   │       │   └── DiagnosisResults.jsx
-│   │       └── index.jsx
-│   ├── services
-│   │   ├── alertsApi.js
-│   │   ├── api.js
-│   │   ├── diagnosisApi.js
-│   │   ├── eventsApi.js
-│   │   └── weatherApi.js
-│   ├── styles
-│   │   ├── index.css
-│   │   └── tailwind.css
-│   └── utils
-│       └── cn.js
-├── struktur_proyek.txt
-├── tailwind.config.js
-└── vite.config.mjs
+- `DB`: Cloudflare D1 database `ai-tani-kupang-web`.
+- `R2`: Bucket R2 `aitaniweb-photos` untuk foto diagnosis/alert.
+- `KV`: Namespace KV untuk cache weather dan demo notification.
 
+## Pengujian & kualitas kode
 
+- Dokumentasi lengkap tersedia di `docs/testing.md`.
+- `pnpm test` menjalankan Vitest untuk frontend + Worker (via jsdom + Miniflare) dan menghasilkan laporan HTML di `coverage/`.
+- `src/services/__tests__/api.test.jsx` memastikan error 401 memicu logout otomatis dan membersihkan storage.
+- Folder `ai-tani-kupang-api/src/routes/__tests__` mencakup health check, foto proxy, serta seeding Worker.
+- Lighthouse / manual QA: fokus pada Photo Diagnosis, Kalender, Community Alerts, dan alur auth.
 
----
+## Tips & troubleshooting
 
-## 🧭 Routes
+- **Foto tidak tampil / nama ter-encode dua kali** - gunakan helper `src/utils/normalizePhotoUrl.js` (sudah dipakai di `AlertDetailModal.jsx` dan `AlertCard.jsx`) untuk membersihkan `%2520`.
+- **TF.js gagal dimuat di browser** - periksa console untuk log `TF.js backend siap`. Jika gagal, jalankan `node scripts/debug-tf.mjs` dan pastikan file `public/model/*` tidak dikompresi oleh CDN.
+- **Antrean offline tidak tersinkron** - cek tab Application -> IndexedDB (`aitani-web`). Pastikan pengguna sudah login; sinkronisasi hanya berjalan ketika `selectIsAuthenticated` bernilai true.
+- **R2 403/404** - verifikasi `PUBLIC_R2_BASE_URL`, `R2_BUCKET`, serta binding `R2` di `wrangler.toml`. Untuk lokal, jalankan Worker dengan `--persist-to` agar file tersimpan di `.wrangler/state/v3/r2`.
+- **Email reset tidak terkirim** - pastikan `RESEND_API_KEY` terset dan domain sudah diverifikasi di Resend. Endpoint akan mengembalikan error detail bila gagal.
 
-Gunakan `useRoutes` di `Routes.jsx` (atau file routing kamu) untuk menambah halaman baru.  
-Halaman **Community Alerts** berada di `/community-alerts`.
+## Referensi internal
 
----
+- `docs/WOW-RUNBOOK.md` - ringkasan roadmap fitur (AI on-device, cuaca BMKG, Community Map, Cron notif, UX polish).
+- `docs/testing.md` - komando testing dan cakupan.
+- `docs/demo-assets/` - kumpulan foto contoh untuk testing upload.
+- `struktur_proyek.txt` dan `KONTEKS_WEB*.txt` - catatan eksplorasi awal developer sebelumnya.
 
-## 🎨 Styling
+## Saran tambahan & pekerjaan belum tuntas
 
-- Tailwind CSS + plugins (forms, typography, aspect-ratio, container queries, fluid typography, anim utilities).
-- Komponen UI sederhana di `components/ui/*`.
-- Ikon via `AppIcon` (Lucide).
+- **Satukan pipeline AI lokal**: update `runLocalDiagnosis` agar memanfaatkan `localModelRunner` + `localDiagnosisEngine`. Saat ini ada dua pendekatan paralel sehingga mudah terjadi drift.
+- **Isi penuh `DISEASE_LABELS`/`UI_TEMPLATES`**: mapping masih placeholder. Ambil daftar kelas final dari training notebook agar rekomendasi konsisten.
+- **Tambah fallback TFLite**: saat TF.js gagal, opsional gunakan `@tensorflow/tfjs-tflite` (sudah tersedia di deps) untuk perangkat low-end.
+- **Kompresi & encrypt antrean foto**: sesuai runbook, tambahkan `canvas.toBlob` sebelum `enqueueRequest` agar ukuran DataURL tidak meledak kalau offline lama.
+- **Monitoring backend**: tambahkan endpoint `/health` ke dashboard + logging ke KV untuk cron agar mudah audit ketika pindah ke staging/production.
+- **Dokumentasikan proses deploy**: README ini menjelaskan setup lokal; tambahkan panduan CI/CD (mis. `wrangler deploy`, binding secrets) supaya handover cepat.
 
----
-
-## 🧪 Testing
-
-```bash
-npm run test
-```
-
----
-
-## 📦 Build & Deploy
-
-```bash
-npm run build   # Vite builds to dist/
-```
-
-Untuk API: deploy Cloudflare Worker sesuai setup Wrangler (R2 & D1 binding sama seperti lokal).
-
----
-
-## 🛟 Troubleshooting
-
-- **Foto tidak muncul / placeholder saja**
-  - Cek `src` pada `<img>` di DevTools. Jika terlihat `...%2520...`, berarti **double-encoded**.  
-    Pastikan `AlertDetailModal.jsx` memakai `normalizePhotoUrl()` dan **jangan** `encodeURI/encodeURIComponent` lagi pada URL yang sudah lengkap.
-  - Jika 404, `AppImage` otomatis jatuh ke `/assets/images/no_image.png`.
-
-- **Banyak error CORS gambar**
-  - Dengan `AppImage` (tanpa `fetch/HEAD` & tanpa `crossOrigin`), **tidak** akan ada error CORS saat menampilkan gambar dari R2.  
-    CORS hanya masalah saat *membaca pixel canvas*—kita tidak melakukan itu.
-
-- **Console ada `net::ERR_BLOCKED_BY_CLIENT`**
-  - Itu dari request uji CSP Google Maps (`gen_204`) yang diblokir extension/ad-block. Aman diabaikan.
-
-- **Order of hooks / “Rendered more hooks than during previous render”**
-  - Jangan `return null` di awal render **setelah** memanggil hooks yang jumlahnya berbeda tergantung kondisi.  
-    Di modal kita, komponen selalu render; visibilitas dikontrol dengan kelas (`opacity / pointer-events`).
-
----
-
-## 🙏 Credits
-
-- Built by **PT. AiTi Global Nexus**
-- Powered by **React + Vite**
-- Backend: **Cloudflare Workers (D1 + R2)**
-- Styled with **Tailwind CSS**
-
-
+Selamat membangun! Jika ada perubahan besar (misalnya model baru atau migrasi schema), dokumentasikan di README ini agar onboarding tim berikutnya tetap mulus.

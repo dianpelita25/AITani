@@ -1,127 +1,197 @@
 // src/ai/localDiagnosis.js
-// On-device diagnosis using TensorFlow.js if available, with safe mock fallback.
-// JSDoc types to keep it TypeScript-safe in JS projects.
+// Memuat TensorFlow.js secara dinamis dan menjalankan diagnosis lokal berbasis model TF.js.
+import modelUrl from '/model/model.json?url';
 
-/**
- * @typedef {Object} Diagnosis
- * @property {string} label
- * @property {number} confidence
- * @property {string} severity
- * @property {string} description
- */
+// sekarang pakai file lokal di /public/libs/tf.min.js
+const TFJS_CDN_URL = '/libs/tf.min.js';
 
-/**
- * @typedef {Object} Recommendation
- * @property {string} id
- * @property {string} title
- * @property {string} description
- * @property {"rendah"|"sedang"|"tinggi"} priority
- * @property {string} timeframe
- */
+let tfInstance = null;
+let tfLoadPromise = null;
+let modelInstance = null;
+let augRegistered = false;
 
-/**
- * @typedef {Object} DiagnosisResult
- * @property {Diagnosis} diagnosis
- * @property {Recommendation[]} recommendations
- */
+function ensureAugmentationStubs(tf) {
+  if (augRegistered) return;
+  const { serialization, layers } = tf;
+  if (!serialization || !layers) return;
 
-/**
- * Try load TensorFlow.js at runtime.
- * @returns {Promise<any|null>}
- */
+  class NoOpRandomFlip extends layers.Layer {
+    static className = 'RandomFlip';
+    constructor(config) {
+      super(config || {});
+    }
+    call(inputs) {
+      return Array.isArray(inputs) ? inputs[0] : inputs;
+    }
+    getConfig() {
+      return { ...super.getConfig() };
+    }
+  }
+
+  class NoOpRandomRotation extends layers.Layer {
+    static className = 'RandomRotation';
+    constructor(config) {
+      super(config || {});
+    }
+    call(inputs) {
+      return Array.isArray(inputs) ? inputs[0] : inputs;
+    }
+    getConfig() {
+      return { ...super.getConfig() };
+    }
+  }
+
+  serialization.registerClass(NoOpRandomFlip);
+  serialization.registerClass(NoOpRandomRotation);
+  augRegistered = true;
+}
+
+async function injectTfScript() {
+  if (tfInstance) return tfInstance;
+
+  if (typeof window === 'undefined') {
+    throw new Error('TF.js hanya bisa dimuat di lingkungan browser.');
+  }
+// ✅ Kalau TF sudah ada (misal dari load sebelumnya), pakai itu saja
+  if (window.tf && typeof window.tf.setBackend === 'function') {
+    tfInstance = window.tf;
+    await tfInstance.setBackend('webgl');
+    await tfInstance.ready();
+    ensureAugmentationStubs(tfInstance);
+    console.log('TF.js reuse instance, backend:', tfInstance.getBackend());
+    return tfInstance;
+  }
+
+  if (tfLoadPromise) return tfLoadPromise;
+
+  tfLoadPromise = new Promise((resolve, reject) => {
+    const existing = document.getElementById('tfjs-script');
+    if (existing) {
+      existing.addEventListener(
+        'load',
+        () => {
+          if (window.tf) {
+            tfInstance = window.tf;
+            resolve(tfInstance);
+          } else {
+            reject(new Error('window.tf tidak ditemukan setelah skrip dimuat.'));
+          }
+        },
+        { once: true }
+      );
+      existing.addEventListener(
+        'error',
+        () => reject(new Error('Gagal memuat skrip TF.js (existing).')),
+        { once: true }
+      );
+      return;
+    }
+
+    console.log('Menginjeksikan skrip TensorFlow.js dari CDN @4.22.0...');
+    const script = document.createElement('script');
+    script.id = 'tfjs-script';
+    script.src = TFJS_CDN_URL;
+    script.async = true;
+    script.onload = async () => {
+      tfInstance = window.tf;
+      if (!tfInstance || typeof tfInstance.setBackend !== 'function') {
+        reject(new Error('window.tf tidak valid setelah skrip dimuat.'));
+        return;
+      }
+      try {
+        await tfInstance.setBackend('webgl');
+        await tfInstance.ready();
+        ensureAugmentationStubs(tfInstance);
+        console.log('TF.js backend siap: webgl versi:', tfInstance.version?.tfjs);
+        resolve(tfInstance);
+      } catch (err) {
+        reject(err);
+      }
+    };
+    script.onerror = () => reject(new Error('Gagal memuat skrip TF.js dari CDN.'));
+    document.head.appendChild(script);
+  });
+
+  return tfLoadPromise;
+}
+
 async function tryLoadTf() {
   try {
-    // Defer to runtime dynamic import so build works without tfjs installed
-    // eslint-disable-next-line no-undef
-    const tf = await import(/* @vite-ignore */ 'https://esm.sh/@tensorflow/tfjs@4.20.0');
-    return tf;
-  } catch (e) {
-    console.warn('TFJS unavailable, using mock fallback:', e?.message || e);
+    return await injectTfScript();
+  } catch (err) {
+    console.warn('TFJS unavailable, using mock fallback:', err?.message || err);
     return null;
   }
 }
 
-/**
- * Attempt to load a model from public path. If unavailable, return null.
- * @param {any} tf
- */
 async function tryLoadModel(tf) {
+  if (modelInstance) return modelInstance;
+
+  ensureAugmentationStubs(tf);
+
+  const TIMEOUT_MS = 8000; // 8 detik
+
+  const loadPromise = (async () => {
+    console.log(`Mencoba memuat model (layers) dari: ${modelUrl}`);
+    const model = await tf.loadLayersModel(modelUrl, {
+      fetchFunc: (url, init) => fetch(url, { ...init, cache: 'no-store' }),
+    });
+    console.log('Model berhasil dimuat dari /model/model.json.');
+    modelInstance = model;
+    return modelInstance;
+  })();
+
   try {
-    const modelUrl = '/model/model.json';
-    const model = await tf.loadGraphModel(modelUrl);
+    const model = await Promise.race([
+      loadPromise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout loadLayersModel > 8s')), TIMEOUT_MS)
+      ),
+    ]);
     return model;
-  } catch (e) {
-    console.warn('Model not found, using mock fallback:', e?.message || e);
+  } catch (err) {
+    console.warn(
+      'Model not found / failed / TIMEOUT, using mock fallback:',
+      err?.message || err
+    );
     return null;
   }
 }
 
-/**
- * Resize an image File to a tensor that matches model expected input.
- * @param {any} tf
- * @param {File|Blob} file
- * @param {number} size
- */
+
 async function fileToInputTensor(tf, file, size = 224) {
-  const imgBitmap = await createImageBitmap(file);
-  // Convert ImageBitmap to tensor: [H,W,3] -> [1,H,W,3]
-  const tfimg = tf.browser.fromPixels(imgBitmap).toFloat();
-  const resized = tf.image.resizeBilinear(tfimg, [size, size]);
-  const normalized = resized.div(255.0);
-  const batched = normalized.expandDims(0);
-  tfimg.dispose();
-  resized.dispose();
-  return batched;
+  const bitmap = await createImageBitmap(file);
+  return tf.tidy(() => {
+    const tensor = tf.browser.fromPixels(bitmap).toFloat();
+    const normalized = tensor.div(255);
+    const resized = tf.image.resizeBilinear(normalized, [size, size]);
+    return resized.expandDims(0);
+  });
 }
 
-/**
- * Produce deterministic mock prediction for demo and offline.
- * @returns {DiagnosisResult}
- */
 function mockPredict() {
-  const candidates = [
-    {
-      label: 'Bercak Daun',
-      severity: 'sedang',
-      description: 'Terlihat bercak coklat pada daun. Perlu pemantauan dan tindakan ringan.'
-    },
-    {
-      label: 'Busuk Akar',
-      severity: 'berat',
-      description: 'Indikasi serangan busuk akar, segera lakukan sanitasi dan pengeringan.'
-    },
-    {
-      label: 'Sehat',
-      severity: 'ringan',
-      description: 'Tanaman tampak sehat, lanjutkan pemeliharaan rutin.'
-    }
-  ];
-  const pick = candidates[Math.floor(Date.now() / (1000 * 7)) % candidates.length];
-  const confidence = pick.label === 'Sehat' ? 88.2 : 91.4;
-  /** @type {DiagnosisResult} */
-  const result = {
+  console.log('Fallback: Menjalankan mockPredict().');
+  return {
     diagnosis: {
-      label: pick.label,
-      confidence,
-      severity: pick.severity,
-      description: pick.description
+      label: 'Bercak Daun (MOCK)',
+      confidence: 75,
+      severity: 'sedang',
+      description: 'Model lokal gagal dimuat. Gunakan hasil server atau coba ulang.'
     },
     recommendations: [
-      { id: 'rec_local_1', title: 'Pemantauan Daun', description: 'Pantau penyebaran bercak setiap 2 hari.', priority: 'sedang', timeframe: '2 hari' },
-      { id: 'rec_local_2', title: 'Penyemprotan Ringan', description: 'Gunakan fungisida sesuai label bila perlu.', priority: 'rendah', timeframe: 'Pagi' }
+      {
+        id: 'rec_mock_1',
+        title: 'Periksa koneksi & console',
+        description: 'Lihat pesan error di console (F12) untuk detail mengapa model gagal dimuat.',
+        priority: 'tinggi',
+        timeframe: 'Segera'
+      }
     ]
   };
-  return result;
 }
-
-/**
- * Run on-device diagnosis using TFJS if available; falls back to mock.
- * Returns quickly and safely without throwing.
- *
- * @param {File|Blob} imageFile
- * @returns {Promise<DiagnosisResult>}
- */
 export async function runLocalDiagnosis(imageFile) {
+    console.log('[localDiagnosis] masuk runLocalDiagnosis, file =', imageFile);
+
   try {
     const tf = await tryLoadTf();
     if (!tf) return mockPredict();
@@ -129,47 +199,95 @@ export async function runLocalDiagnosis(imageFile) {
     const model = await tryLoadModel(tf);
     if (!model) return mockPredict();
 
-    const input = await fileToInputTensor(tf, imageFile, 224);
-    const logits = model.predict(input); // shape: [1, C]
-    const data = await logits.data();
-    const arr = Array.from(data);
-    const maxIdx = arr.reduce((mi, v, i, a) => (v > a[mi] ? i : mi), 0);
+    console.log('Memproses gambar untuk input model...');
+    const input = await fileToInputTensor(tf, imageFile, 128);
 
-    // Demo labels; real model should ship a labels.json alongside.
-    const labels = ['Bercak Daun', 'Busuk Akar', 'Sehat'];
-    const label = labels[maxIdx] || 'Sehat';
-    const confidence = Math.round(arr[maxIdx] * 1000) / 10 || 90.0;
-    const severity = label === 'Busuk Akar' ? 'berat' : label === 'Sehat' ? 'ringan' : 'sedang';
+    console.log('Menjalankan prediksi (local TF.js model)...');
+    const output = model.predict(input);
+    const data = await output.data();
 
-    /** @type {DiagnosisResult} */
+    const maxIndex = data.indexOf(Math.max(...data));
+    const confidence = Math.round(data[maxIndex] * 100);
+
+    // ⚠️ Sesuaikan dengan output model yang sekarang 3 kelas
+    const classLabels = ['Blight', 'Common_Rust', 'Gray_Leaf_Spot'];
+    const label = classLabels[maxIndex] || 'Unknown';
+
+    // ➜ LOG DEBUG OUTPUT MENTAH & PILIHAN INDEX
+    console.log('[localDiagnosis] raw output =', Array.from(data));
+    console.log(
+      '[localDiagnosis] picked index =',
+      maxIndex,
+      'label =',
+      label,
+      'confidence =',
+      confidence
+    );
+
+    input.dispose();
+    output.dispose();
+
+    const severityMap = {
+      Blight: 'berat',
+      Common_Rust: 'sedang',
+      Gray_Leaf_Spot: 'sedang'
+    };
+    const descriptionMap = {
+      Blight: 'Terdeteksi Hawar Daun (Blight). Monitor penyebaran dan lakukan tindakan cepat.',
+      Common_Rust: 'Terdeteksi Karat Biasa. Perhatikan bercak coklat/oranye pada daun.',
+      Gray_Leaf_Spot: 'Terdeteksi Bercak Abu-abu. Biasanya moderat tapi perlu diawasi.'
+    };
+
     const result = {
       diagnosis: {
         label,
         confidence,
-        severity,
-        description: label === 'Sehat' ? 'Tanaman tampak sehat.' : 'Deteksi awal menunjukkan gejala yang perlu ditangani.'
+        severity: severityMap[label] || 'tidak diketahui',
+        description: descriptionMap[label] || 'Analisis AI selesai.'
       },
       recommendations: [
-        { id: 'rec_tf_1', title: 'Pantau Kondisi', description: 'Periksa kembali dalam 2-3 hari.', priority: 'rendah', timeframe: '2-3 hari' },
-        { id: 'rec_tf_2', title: 'Perbaiki Drainase', description: 'Pastikan tanah tidak tergenang.', priority: 'sedang', timeframe: 'Pagi' }
+        {
+          id: 'rec_tf_1',
+          title: `Langkah untuk ${label}`,
+          description: 'Ikuti panduan budidaya yang sesuai dan konsultasi jika gejala memburuk.',
+          priority: 'sedang',
+          timeframe: '2-3 hari'
+        },
+        {
+          id: 'rec_tf_2',
+          title: 'Pencegahan umum',
+          description: 'Pertahankan sanitasi lahan, sirkulasi udara, dan nutrisi yang seimbang.',
+          priority: 'rendah',
+          timeframe: 'Berkelanjutan'
+        }
       ]
     };
 
-    input.dispose();
-    if (typeof logits?.dispose === 'function') logits.dispose();
+    // ➜ LOG HASIL FINAL YANG DIKIRIM KE UI
+    console.log('[localDiagnosis] result yang dikembalikan =', result);
+
     return result;
-  } catch (e) {
-    console.warn('Local diagnosis failed, using mock:', e?.message || e);
+  } catch (err) {
+    console.error('Terjadi error saat diagnosis lokal, menggunakan mock:', err);
     return mockPredict();
   }
 }
 
-/**
- * Compress an image file using canvas to JPEG.
- * @param {File} file
- * @param {number} quality 0..1
- * @returns {Promise<File>}
- */
+export async function warmupLocalTf() {
+  console.log('[localDiagnosis] warmupLocalTf() dipanggil...');
+  try {
+    const tf = await tryLoadTf();
+    if (!tf) {
+      console.warn('[localDiagnosis] warmup: TF.js tidak tersedia (akan pakai mock kalau diagnosis).');
+      return;
+    }
+    // Tidak usah load model di sini dulu biar startup tetap ringan.
+    console.log('[localDiagnosis] warmup: TF.js berhasil dimuat & siap dipakai.');
+  } catch (err) {
+    console.warn('[localDiagnosis] warmup: gagal memuat TF.js lebih awal:', err);
+  }
+}
+
 export async function compressImage(file, quality = 0.8) {
   const bitmap = await createImageBitmap(file);
   const canvas = document.createElement('canvas');
@@ -177,9 +295,13 @@ export async function compressImage(file, quality = 0.8) {
   canvas.height = bitmap.height;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(bitmap, 0, 0);
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+  const blob = await new Promise((resolve) =>
+    canvas.toBlob(resolve, 'image/jpeg', quality)
+  );
   if (!blob) return file;
-  const newFile = new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
-  return newFile;
+  return new File(
+    [blob],
+    file.name.replace(/\.[^.]+$/, '') + '.jpg',
+    { type: 'image/jpeg' }
+  );
 }
-

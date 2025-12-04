@@ -1,16 +1,21 @@
 // src/App.jsx
 
 import React, { useEffect, useCallback, useState } from "react";
-import { useDispatch } from 'react-redux'; // <-- [BARU] Impor useDispatch
-import { setCredentials } from './services/authSlice'; // <-- [BARU] Impor instruksi kita
+// [PERBAIKAN 1] Impor useSelector dan selector isAuthenticated
+import { useDispatch, useSelector } from 'react-redux'; 
+import { setCredentials, selectIsAuthenticated } from './services/authSlice'; 
 import Routes from "./Routes";
 import { useCreateAlertMutation } from './services/alertsApi';
 import { useCreateDiagnosisMutation } from './services/diagnosisApi';
-import { useCreateFarmTaskMutation, useUpdateFarmTaskMutation, useDeleteFarmTaskMutation } from './services/farmTasksApi';import { retryQueue } from './offline/queueService';
+import { useCreateFarmTaskMutation, useUpdateFarmTaskMutation, useDeleteFarmTaskMutation } from './services/farmTasksApi';
+import { retryQueue } from './offline/queueService';
 import { Toaster, toast } from 'react-hot-toast';
 
 function App() {
-  const dispatch = useDispatch(); // <-- [BARU] Siapkan dispatch
+  const dispatch = useDispatch();
+  // [PERBAIKAN 2] Dapatkan status autentikasi dari Redux state
+  const isAuthenticated = useSelector(selectIsAuthenticated); 
+
   const [createAlert] = useCreateAlertMutation();
   const [createDiagnosis] = useCreateDiagnosisMutation();
   const [createEvent] = useCreateFarmTaskMutation();
@@ -20,7 +25,7 @@ function App() {
     typeof navigator === 'undefined' ? true : navigator.onLine
   );
 
-  // [BARU] Logika untuk memuat sesi login saat aplikasi pertama kali dibuka/direfresh
+  // Logika untuk memuat sesi login saat aplikasi pertama kali dibuka/direfresh
   useEffect(() => {
     const token = localStorage.getItem('sessionToken');
     const userProfile = localStorage.getItem('userProfile');
@@ -28,16 +33,14 @@ function App() {
     if (token && userProfile) {
       try {
         const user = JSON.parse(userProfile);
-        // Jika token dan profil ada, langsung set state di Redux
         dispatch(setCredentials({ user, token }));
         console.log("Sesi berhasil dimuat dari localStorage.");
       } catch (e) {
         console.error("Gagal mem-parsing userProfile dari localStorage", e);
       }
     }
-  }, [dispatch]); // Jalankan ini sekali saat komponen App dimuat
+  }, [dispatch]);
 
-  // [LAMA & TETAP DIPERTAHANKAN] Logika untuk sinkronisasi antrean offline
   const apiClient = useCallback(async (request) => {
     switch (request.type) {
         case 'createAlert': return createAlert(request.payload).unwrap();
@@ -49,17 +52,18 @@ function App() {
       }
   }, [createAlert, createDiagnosis, createEvent, updateEvent, deleteEvent]);
 
-  // [LAMA & TETAP DIPERTAHANKAN] useEffect untuk menangani sinkronisasi
+  // useEffect untuk menangani sinkronisasi
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const syncChannel = new BroadcastChannel('sync-channel');
 
     const sync = () => {
-        if (navigator.onLine) {
-            console.log('Mencoba sinkronisasi otomatis...');
+        // [PERBAIKAN 3] Tambahkan kondisi: HANYA jalankan sinkronisasi jika online DAN sudah terautentikasi.
+        if (navigator.onLine && isAuthenticated) {
+            console.log('Kondisi terpenuhi (Online & Authenticated). Mencoba sinkronisasi otomatis...');
             retryQueue(apiClient);
         } else {
-            console.log('Offline, sinkronisasi ditunda.');
+            console.log(`Sinkronisasi ditunda. Online: ${navigator.onLine}, Authenticated: ${isAuthenticated}`);
         }
     };
 
@@ -71,15 +75,18 @@ function App() {
     };
     
     window.addEventListener('online', sync);
+    
+    // Panggil sync() pertama kali. Jika belum login, dia akan ditunda secara otomatis oleh logika di atas.
     sync();
 
     return () => {
       syncChannel.close();
       window.removeEventListener('online', sync);
     };
-  }, [apiClient]);
+  // [PERBAIKAN 4] Tambahkan isAuthenticated sebagai dependency. Hook ini akan otomatis berjalan kembali ketika state login berubah.
+  }, [apiClient, isAuthenticated]); 
 
-  // [LAMA & TETAP DIPERTAHANKAN] useEffect untuk menampilkan status online/offline
+  // useEffect untuk menampilkan status online/offline
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const updateBody = (online) => {
@@ -122,7 +129,6 @@ function App() {
 
 export default App;
 
-// Komponen NetworkStatusPill tetap sama
 function NetworkStatusPill({ isOnline }) {
   if (isOnline) return null;
   return (

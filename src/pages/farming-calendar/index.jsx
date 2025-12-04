@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// [PERBAIKAN #1] Pindahkan semua impor hook ke sini, di bagian atas.
 import {
   useGetFarmTasksQuery,
   useCreateFarmTaskMutation,
@@ -46,21 +45,34 @@ const FarmingCalendar = () => {
   const [viewMode, setViewMode] = useState('month');
   const [activeFilters, setActiveFilters] = useState(['all']);
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
+
+  // Status konektivitas sederhana dari browser
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [cachedEvents, setCachedEvents] = useState([]);
 
   const range = useMemo(() => makeRange(currentDate), [currentDate]);
 
-  // [PERBAIKAN #2] Gunakan nama hook yang benar (useGetFarmTasksQuery)
-  const { data: eventsOnline = [], isFetching, isError } = useGetFarmTasksQuery(range, {
+  const {
+    data: eventsOnline = [],
+    isFetching,
+    isError,
+    error,
+  } = useGetFarmTasksQuery(range, {
     skip: !isOnline,
     refetchOnReconnect: true,
     refetchOnFocus: false,
     keepUnusedDataFor: 3600,
   });
 
-  // [PERBAIKAN #3] Gunakan nama hook mutasi yang benar
+  // Error jaringan khas ketika offline / DNS gagal
+  const isNetworkError =
+    isError && error && error.status === 'FETCH_ERROR';
+
+  // Kita anggap "offline" baik saat benar-benar offline maupun saat FETCH_ERROR
+  const isOfflineLike = !isOnline || isNetworkError;
+
   const [createEvent] = useCreateFarmTaskMutation();
   const [updateEvent] = useUpdateFarmTaskMutation();
   const [deleteEvent] = useDeleteFarmTaskMutation();
@@ -86,20 +98,22 @@ const FarmingCalendar = () => {
     const saved = localStorage.getItem('farming-calendar-filters');
     if (saved) setActiveFilters(JSON.parse(saved));
   }, []);
+
   useEffect(() => {
     localStorage.setItem('farming-calendar-filters', JSON.stringify(activeFilters));
   }, [activeFilters]);
 
-  // LKG cache
+  // Saat berhasil online, simpan snapshot ke storage lokal (LKG)
   useEffect(() => {
-    if (isOnline && eventsOnline && eventsOnline.length) {
+    if (isOnline && !isNetworkError && eventsOnline && eventsOnline.length) {
       upsertEventsLocal(eventsOnline).catch(console.warn);
       setCachedEvents(eventsOnline);
     }
-  }, [isOnline, eventsOnline]);
+  }, [isOnline, isNetworkError, eventsOnline]);
 
+  // Saat offline / error jaringan → pakai data lokal terakhir
   useEffect(() => {
-    if (!isOnline) {
+    if (isOfflineLike) {
       (async () => {
         try {
           const lkg = await getEventsByRange({ from: range.from, to: range.to });
@@ -110,15 +124,17 @@ const FarmingCalendar = () => {
         }
       })();
     }
-  }, [isOnline, range.from, range.to]);
+  }, [isOfflineLike, range.from, range.to]);
 
-  const events = isOnline ? eventsOnline : cachedEvents;
+  // Pilih sumber events yang dipakai UI
+  const events = isOfflineLike ? cachedEvents : eventsOnline;
 
   const handlePreviousMonth = () => {
     const newDate = new Date(currentDate);
     newDate.setMonth(currentDate.getMonth() - 1);
     setCurrentDate(newDate);
   };
+
   const handleNextMonth = () => {
     const newDate = new Date(currentDate);
     newDate.setMonth(currentDate.getMonth() + 1);
@@ -130,7 +146,7 @@ const FarmingCalendar = () => {
 
   const handleAddEvent = async (newEvent) => {
     try {
-      if (isOnline) {
+      if (!isOfflineLike) {
         await createEvent(newEvent).unwrap();
       } else {
         await enqueueRequest({ type: 'createEvent', payload: newEvent });
@@ -146,7 +162,7 @@ const FarmingCalendar = () => {
 
   const handleUpdateEvent = async (eventId, updates) => {
     try {
-      if (isOnline) {
+      if (!isOfflineLike) {
         await updateEvent({ id: eventId, ...updates }).unwrap();
       } else {
         await enqueueRequest({ type: 'updateEvent', payload: { id: eventId, ...updates } });
@@ -161,7 +177,7 @@ const FarmingCalendar = () => {
 
   const handleDeleteEvent = async (eventId) => {
     try {
-      if (isOnline) {
+      if (!isOfflineLike) {
         await deleteEvent(eventId).unwrap();
       } else {
         await enqueueRequest({ type: 'deleteEvent', payload: { id: eventId } });
@@ -245,13 +261,19 @@ const FarmingCalendar = () => {
   const filteredEvents = getFilteredEvents();
   const eventCounts = getEventCounts();
 
-  if (isFetching && isOnline) {
+  const uiOnline = !isOfflineLike;
+
+  if (isFetching && uiOnline) {
     return (
       <LoadingOverlay isVisible={true} message="Memuat kalender pertanian..." animationType="plant" />
     );
   }
 
-  if (isError && isOnline) {
+  // Hanya tampilkan layar error kalau benar-benar error server saat online,
+  // bukan saat offline / gagal jaringan.
+  const shouldShowErrorScreen = isError && uiOnline && !isNetworkError;
+
+  if (shouldShowErrorScreen) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
@@ -272,7 +294,7 @@ const FarmingCalendar = () => {
           <DesktopTopNav />
         </div>
         <div className="mx-auto w-full max-w-screen-xl px-4 md:px-6 lg:px-8">
-          <OfflineStatusBanner isOnline={isOnline} />
+          <OfflineStatusBanner isOnline={uiOnline} />
           <div className="bg-card border-b border-border sticky top-0 z-30">
             <div className="px-0 md:px-2 lg:px-4 py-4">
               <div className="flex items-center gap-3">
@@ -334,7 +356,7 @@ const FarmingCalendar = () => {
             </div>
           </div>
         </div>
-        <OfflineStatusBanner isOnline={isOnline} />
+        <OfflineStatusBanner isOnline={uiOnline} />
         <div className="flex h-screen">
           <div className="flex-1 flex flex-col">
             <CalendarHeader
