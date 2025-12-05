@@ -2,24 +2,25 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-// [PERBAIKAN KUNCI] Impor dan gunakan nama hook yang benar
-import { useCreateFarmTaskMutation } from '../../../services/farmTasksApi'; 
+import { useCreateFarmTaskMutation } from '../../../services/farmTasksApi';
 import { enqueueRequest } from '../../../offline/queueService';
 import Icon from '../../../components/AppIcon';
 import Image from '../../../components/AppImage';
 import Button from '../../../components/ui/Button';
 import ShareActionSheet from '../../../components/ui/ShareActionSheet';
+import ShopEstimateModal from './ShopEstimateModal';
 
-const DiagnosisResults = ({ 
-  results, 
-  image, 
-  formData, 
-  onStartNew 
+const DiagnosisResults = ({
+  results,
+  image,
+  formData,
+  onStartNew,
 }) => {
   const navigate = useNavigate();
   const [showShareSheet, setShowShareSheet] = useState(false);
-  
-  // [PERBAIKAN KUNCI] Panggil hook dengan nama yang benar
+  const [shopModalOpen, setShopModalOpen] = useState(false);
+  const [selectedChemical, setSelectedChemical] = useState(null);
+
   const [createEvent, { isLoading: isSaving }] = useCreateFarmTaskMutation();
 
   const getSeverityColor = (severity) => {
@@ -42,11 +43,11 @@ const DiagnosisResults = ({
 
   const handleSaveAllPlans = async () => {
     if (!results?.recommendations || results.recommendations.length === 0) {
-      alert("Tidak ada rekomendasi untuk disimpan.");
+      alert('Tidak ada rekomendasi untuk disimpan.');
       return;
     }
 
-    const plansToSave = results.recommendations.map(rec => {
+    const plansToSave = results.recommendations.map((rec) => {
       const date = new Date().toISOString().split('T')[0];
       const hhmm = /^\d{1,2}:\d{2}$/;
       const time = hhmm.test(rec.timeframe || '') ? rec.timeframe : undefined;
@@ -56,27 +57,24 @@ const DiagnosisResults = ({
         date,
         title: rec.title,
         type: 'semprot',
-        crop: formData.crop_type || "Unknown",
+        crop: formData.crop_type || 'Unknown',
         ...(time ? { time } : {}),
         location: formData.field_id || 'Lahan Utama',
         completed: false,
         notes: [rec.description, `Prioritas: ${rec.priority}`],
         createdAt: new Date().toISOString(),
-        // [PENYEMPURNAAN] Pastikan tipe 'createEvent' tetap sama untuk offline queue
-        typeForQueue: 'createEvent' 
+        typeForQueue: 'createEvent',
       };
     });
 
     try {
-      // [PENYEMPURNAAN] Di sini kita menggunakan 'createEvent' yang merupakan alias dari 'useCreateFarmTaskMutation'
-      await Promise.all(plansToSave.map(plan => createEvent(plan).unwrap()));
-      navigate('/farming-calendar', { 
-        state: { message: `${plansToSave.length} rencana baru berhasil disimpan!` }
+      await Promise.all(plansToSave.map((plan) => createEvent(plan).unwrap()));
+      navigate('/farming-calendar', {
+        state: { message: `${plansToSave.length} rencana baru berhasil disimpan!` },
       });
     } catch (error) {
       console.error('Gagal menyimpan rencana, menyimpan ke antrean:', error);
       for (const plan of plansToSave) {
-        // [PENYEMPURNAAN] Pastikan tipe yang dikirim ke offline queue tetap 'createEvent'
         await enqueueRequest({ type: 'createEvent', payload: plan });
       }
       alert(`Anda sedang offline. ${plansToSave.length} rencana disimpan dan akan disinkronkan.`);
@@ -88,12 +86,11 @@ const DiagnosisResults = ({
     title: `Diagnosis AI: ${results?.diagnosis?.label}`,
     description: `Akurasi: ${results?.diagnosis?.confidence}% | Keparahan: ${results?.diagnosis?.severity}`,
     results: [{ name: results?.diagnosis?.label, confidence: results?.diagnosis?.confidence }],
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   };
 
   return (
     <div className="space-y-6">
-      {/* Sisa dari JSX tidak ada perubahan dan tetap sama persis */}
       {/* Header */}
       <div className="bg-card rounded-lg border border-border p-6">
         <div className="flex items-center space-x-3 mb-4">
@@ -134,7 +131,7 @@ const DiagnosisResults = ({
           <p className="text-sm text-muted-foreground">{results?.diagnosis?.description}</p>
         </div>
       </div>
-      
+
       {/* Recommendations */}
       <div className="bg-card rounded-lg border border-border p-6">
         <div className="flex items-center space-x-3 mb-6">
@@ -163,9 +160,29 @@ const DiagnosisResults = ({
                     <p className="text-sm text-muted-foreground mb-3">{recommendation.description}</p>
                     <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                       <span>Prioritas: {recommendation.priority}</span>
-                      <span>•</span>
                       <span>Waktu: {recommendation.timeframe}</span>
                     </div>
+                    {recommendation.category === 'chemical' && (
+                      <div className="mt-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedChemical({
+                              diseaseName: results?.diagnosis?.label || null,
+                              activeIngredient:
+                                recommendation.active_ingredient ||
+                                recommendation.title ||
+                                'Bahan aktif tidak diketahui',
+                            });
+                            setShopModalOpen(true);
+                          }}
+                        >
+                          🛒 Hitung Biaya & Cari Toko
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -203,6 +220,20 @@ const DiagnosisResults = ({
         onClose={() => setShowShareSheet(false)}
         shareData={shareData}
       />
+
+      {selectedChemical && (
+        <ShopEstimateModal
+          open={shopModalOpen}
+          onClose={() => setShopModalOpen(false)}
+          diseaseName={selectedChemical.diseaseName}
+          activeIngredient={selectedChemical.activeIngredient}
+          defaultLandSize={0.25}
+          location={{
+            latitude: formData?.latitude || null,
+            longitude: formData?.longitude || null,
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -26,3 +26,33 @@ yarn-error.log*
 # File snapshot yang digenerate oleh skrip Anda
 KONTEKS_WEB.txt
 struktur_proyek.txt
+
+
+# Playwright
+test-results/
+playwright-report/
+trace.zip
+
+# Cloudflare Wrangler
+.wrangler/
+**/.wrangler/tmp/
+**/.wrangler/state/
+
+# Coverage
+coverage/
+
+# Cache tools
+.vite/
+.eslintcache
+
+# Model lama besar (supaya repo tidak berat)
+public/model/old_model/
+public/model/old_model.1/
+
+# Map files
+*.map
+
+# ENV & SECRET
+.dev.vars
+.env
+.env.*
