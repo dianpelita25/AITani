@@ -1,5 +1,6 @@
 ai_tani_kupang Tallwind - Copy
 ├── .env.txt
+├── KONTEKS_WEB - Copy (2).txt
 ├── KONTEKS_WEB - Copy.txt
 ├── KONTEKS_WEB - INi saat membuat ai local offline.txt
 ├── KONTEKS_WEB.txt
@@ -77,6 +78,10 @@ ai_tani_kupang Tallwind - Copy
 │   │   │       │       └── 9720582e742b2d0573c56af6f4fb8eaeeff0b0843e2eaa987d9e5501564a6d80.sqlite
 │   │   │       └── workflows
 │   │   └── tmp
+│   │       ├── bundle-0PikD3
+│   │       │   ├── checked-fetch.js
+│   │       │   ├── middleware-insertion-facade.js
+│   │       │   └── middleware-loader.entry.ts
 │   │       ├── bundle-54zzoV
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
@@ -90,6 +95,10 @@ ai_tani_kupang Tallwind - Copy
 │   │       │   ├── middleware-insertion-facade.js
 │   │       │   └── middleware-loader.entry.ts
 │   │       ├── bundle-CeSID1
+│   │       │   ├── checked-fetch.js
+│   │       │   ├── middleware-insertion-facade.js
+│   │       │   └── middleware-loader.entry.ts
+│   │       ├── bundle-GXExEB
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
 │   │       │   └── middleware-loader.entry.ts
@@ -113,7 +122,14 @@ ai_tani_kupang Tallwind - Copy
 │   │       │   ├── checked-fetch.js
 │   │       │   ├── middleware-insertion-facade.js
 │   │       │   └── middleware-loader.entry.ts
+│   │       ├── bundle-zGNThl
+│   │       │   ├── checked-fetch.js
+│   │       │   ├── middleware-insertion-facade.js
+│   │       │   └── middleware-loader.entry.ts
 │   │       ├── dev-58Fx4C
+│   │       │   ├── index.js
+│   │       │   └── index.js.map
+│   │       ├── dev-6i2oRL
 │   │       │   ├── index.js
 │   │       │   └── index.js.map
 │   │       ├── dev-7CmjSa
@@ -128,13 +144,19 @@ ai_tani_kupang Tallwind - Copy
 │   │       ├── dev-byeFH4
 │   │       │   ├── index.js
 │   │       │   └── index.js.map
+│   │       ├── dev-eY6zXy
+│   │       │   ├── index.js
+│   │       │   └── index.js.map
 │   │       ├── dev-jRlToM
 │   │       │   ├── index.js
 │   │       │   └── index.js.map
 │   │       ├── dev-pzrtOZ
 │   │       │   ├── index.js
 │   │       │   └── index.js.map
-│   │       └── dev-qc4oOH
+│   │       ├── dev-qc4oOH
+│   │       │   ├── index.js
+│   │       │   └── index.js.map
+│   │       └── dev-wVmK9N
 │   │           ├── index.js
 │   │           └── index.js.map
 │   ├── fixtures
@@ -976,7 +998,17 @@ ai_tani_kupang Tallwind - Copy
 │   │       ├── utils.js
 │   │       └── weather.js
 │   ├── tmp
-│   │   └── out.txt
+│   │   ├── out.txt
+│   │   └── v3
+│   │       ├── cache
+│   │       │   └── miniflare-CacheObject
+│   │       ├── d1
+│   │       │   └── miniflare-D1DatabaseObject
+│   │       ├── kv
+│   │       │   └── miniflare-KVNamespaceObject
+│   │       ├── r2
+│   │       │   └── miniflare-R2BucketObject
+│   │       └── workflows
 │   └── wrangler.toml
 ├── ambil-kode-web.mjs
 ├── buat-struktur.mjs
@@ -1127,10 +1159,12 @@ ai_tani_kupang Tallwind - Copy
 ├── index.html
 ├── jsconfig.json
 ├── package.json
+├── playwright.config.js
 ├── postcss.config.js
 ├── public
 │   ├── assets
 │   │   └── images
+│   ├── demo
 │   ├── libs
 │   │   └── tf.min.js
 │   ├── manifest.json
@@ -1171,7 +1205,8 @@ ai_tani_kupang Tallwind - Copy
 │   │   ├── localLabelConfig.js
 │   │   ├── localModelConfig.js
 │   │   ├── localModelRunner.js
-│   │   └── modelWeights.js
+│   │   ├── modelWeights.js
+│   │   └── onlineDiagnosis.js
 │   ├── components
 │   │   ├── AppIcon.jsx
 │   │   ├── AppImage.jsx
@@ -1217,8 +1252,6 @@ ai_tani_kupang Tallwind - Copy
 │   │   │   │   ├── CropImageDisplay.jsx
 │   │   │   │   ├── DiagnosisCard.jsx
 │   │   │   │   ├── DiagnosisHeader.jsx
-│   │   │   │   ├── EnvironmentalFactors.jsx
-│   │   │   │   ├── OfflineIndicator.jsx
 │   │   │   │   └── RecommendationCard.jsx
 │   │   │   └── index.jsx
 │   │   ├── farming-calendar
@@ -1273,4 +1306,8 @@ ai_tani_kupang Tallwind - Copy
 ├── struktur_proyek.txt
 ├── tailwind.config.js
 ├── temp_model.json
+├── test-results
+│   └── .last-run.json
+├── tests
+│   └── photo-diagnosis.spec.js
 └── vite.config.mjs

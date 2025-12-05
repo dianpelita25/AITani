@@ -1,12 +1,34 @@
 // src/pages/photo-diagnosis/components/DiagnosisForm.jsx
 
 import React, { useState, useEffect } from 'react';
+import { skipToken } from '@reduxjs/toolkit/query';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
+import { useGetWeatherQuery } from '../../../services/weatherApi';
 
 const LAST_LOCATION_KEY = 'aitani:last-location-v1';
+
+const PART_OPTIONS = [
+  { value: 'Daun', label: 'Daun' },
+  { value: 'Batang', label: 'Batang' },
+  { value: 'Buah/Bunga', label: 'Buah/Bunga' },
+  { value: 'Akar', label: 'Akar' },
+];
+
+const NOTE_PLACEHOLDERS = {
+  jagung:
+    'Contoh: pucuk daun sobek dimakan ulat, daun berwarna putih (bule), atau tongkol busuk...',
+  padi:
+    'Contoh: daun mengering seperti terbakar, bulir padi hampa/kosong, atau banyak keong di petakan...',
+  cabai:
+    'Contoh: daun keriting, buah rontok sebelum matang, bercak patek, atau ada kutu putih di daun...',
+  tomat:
+    'Contoh: daun bercak hitam, pangkal buah busuk, atau tanaman tiba-tiba layu siang hari...',
+  default:
+    'Deskripsikan gejala yang Anda lihat (warna daun, bentuk bercak, ada ulat/kutu, bagian tanaman yang terkena)...',
+};
 
 const saveCachedLocation = (latitude, longitude) => {
   try {
@@ -52,10 +74,19 @@ const DiagnosisForm = ({
     latitude: '',
     longitude: '',
     notes: '',
+    affected_parts: [],
   });
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState(null);
   const [errors, setErrors] = useState({});
+  const lat = formData?.latitude;
+  const lon = formData?.longitude;
+  const shouldFetchWeather = !!lat && !!lon;
+  const {
+    data: weather,
+    isLoading: isWeatherLoading,
+    isError: isWeatherError,
+  } = useGetWeatherQuery(shouldFetchWeather ? { lat, lon } : skipToken);
 
   const cropOptions = [
     { value: 'padi', label: 'Padi' },
@@ -223,9 +254,28 @@ const DiagnosisForm = ({
         longitude: parseFloat(formData?.longitude),
         timestamp: new Date()?.toISOString(),
       };
+      // Pastikan affected_parts dikirim sebagai JSON string
+      if (Array.isArray(formData.affected_parts)) {
+        submissionData.affected_parts = JSON.stringify(formData.affected_parts);
+      }
       onSubmit(submissionData);
     }
   };
+
+  const toggleAffectedPart = (part) => {
+    setFormData((prev) => {
+      const exists = prev.affected_parts.includes(part);
+      return {
+        ...prev,
+        affected_parts: exists
+          ? prev.affected_parts.filter((p) => p !== part)
+          : [...prev.affected_parts, part],
+      };
+    });
+  };
+
+  const notesPlaceholder =
+    NOTE_PLACEHOLDERS[formData.crop_type] || NOTE_PLACEHOLDERS.default;
 
   return (
     <div className="bg-card rounded-lg border border-border p-6">
@@ -268,6 +318,32 @@ const DiagnosisForm = ({
           searchable
           description="Pilih tanaman yang akan didiagnosis"
         />
+
+        {/* Affected Parts / Bagian Sakit */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">
+            Bagian mana yang terlihat sakit?
+          </label>
+          <p className="text-xs text-muted-foreground">
+            Boleh pilih lebih dari satu. Ini membantu Dokter Tani fokus ke bagian yang tepat.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {PART_OPTIONS.map((opt) => {
+              const isActive = formData.affected_parts.includes(opt.value);
+              return (
+                <Button
+                  key={opt.value}
+                  type="button"
+                  variant={isActive ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => toggleAffectedPart(opt.value)}
+                >
+                  {opt.label}
+                </Button>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Location Section */}
         <div className="space-y-4">
@@ -321,6 +397,29 @@ const DiagnosisForm = ({
               error={errors?.location}
             />
           </div>
+
+          {shouldFetchWeather && (
+            <div className="mt-2 text-sm">
+              {isWeatherLoading && (
+                <div className="text-muted-foreground">Mengambil data cuaca...</div>
+              )}
+              {isWeatherError && (
+                <div className="text-red-500">Gagal memuat cuaca</div>
+              )}
+              {weather && !isWeatherLoading && !isWeatherError && (
+                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1 text-foreground">
+                  <span role="img" aria-label="cuaca">☀️</span>
+                  <span className="font-medium">
+                    {typeof weather.tempC === 'number' ? `${weather.tempC}°C` : 'N/A'}
+                    {weather.moistureLevel ? ` · ${weather.moistureLevel}` : ''}
+                  </span>
+                  {weather.condition && (
+                    <span className="text-muted-foreground">· {weather.condition}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Notes */}
@@ -329,7 +428,7 @@ const DiagnosisForm = ({
             Catatan Tambahan
           </label>
           <textarea
-            placeholder="Deskripsikan gejala yang terlihat pada tanaman..."
+            placeholder={notesPlaceholder}
             value={formData?.notes}
             onChange={(e) => handleInputChange('notes', e?.target?.value)}
             rows={3}

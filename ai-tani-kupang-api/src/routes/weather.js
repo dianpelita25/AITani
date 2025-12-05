@@ -1,6 +1,7 @@
 // ai-tani-kupang-api/src/routes/weather.js
 
 import { json } from './utils';
+import { fetchWeatherForLocation } from '../utils/weather';
 
 // Handler utama untuk GET /api/weather/advice
 export async function handleGetWeatherAdvice(c) {
@@ -41,6 +42,30 @@ export async function handleGetWeatherAdvice(c) {
         console.warn("BMKG fetch failed, using heuristic fallback:", err.message);
         const fallbackData = buildHeuristicAdvice(lat, lon);
         return json(fallbackData, 200, env, request);
+    }
+}
+
+// Handler sederhana: GET /api/weather?lat=...&lon=...
+export async function handleGetWeather(c) {
+    const env = c.env;
+    const request = c.req.raw;
+    const url = new URL(request.url);
+
+    const latParam = url.searchParams.get('lat') ?? url.searchParams.get('latitude');
+    const lonParam =
+        url.searchParams.get('lon') ??
+        url.searchParams.get('lng') ??
+        url.searchParams.get('longitude');
+
+    const lat = latParam && latParam.trim() !== '' ? latParam : '-10.177';
+    const lon = lonParam && lonParam.trim() !== '' ? lonParam : '123.607';
+
+    try {
+        const weather = await fetchWeatherForLocation(env, { latitude: lat, longitude: lon });
+        return json({ ...weather, fallback: (!latParam || !lonParam) ? true : false }, 200, env, request);
+    } catch (err) {
+        console.warn('[handleGetWeather] failed:', err?.message || err);
+        return json({ error: 'failed_to_fetch_weather' }, 500, env, request);
     }
 }
 

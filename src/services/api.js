@@ -4,7 +4,8 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { toast } from 'react-hot-toast';
 import { logOut } from './authSlice'; // [PERBAIKAN 1] Impor instruksi logOut
 
-const RAW_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8787';
+const envBase = (import.meta.env.VITE_API_BASE_URL || '').trim();
+const RAW_BASE = envBase || 'http://127.0.0.1:8787';
 const baseUrl = `${RAW_BASE.replace(/\/+$/, '')}/api`;
 
 const rawBaseQuery = fetchBaseQuery({

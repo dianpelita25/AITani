@@ -21,6 +21,7 @@
 - **API Cloudflare Worker** - service `ai-tani-kupang-api/src/index.js` memakai Hono, D1 (SQL), R2 (foto), KV (cache), dan cron untuk saran cuaca BMKG.
 - **Otomasi cuaca** - cron Worker mengambil prakiraan, menyimpannya di KV, dan menampilkan rekomendasi di Kalender.
 - **Testing siap liputan** - Vitest + Testing Library mencakup utilitas, komponen krusial, serta Worker route (`docs/testing.md`).
+- **Jalur online (opsional)** - Saat `VITE_ENABLE_ONLINE_AI=true` dan confidence lokal <65%, FE memanggil endpoint `/api/diagnosis/online` (stub Gemini). Jika `GEMINI_API_KEY` tidak diisi, backend mengembalikan mock agar UI tetap jalan.
 
 ## Ekspektasi & target berikutnya
 
@@ -188,6 +189,7 @@ Tambahan: cron Worker (lihat `wrangler.toml`) menjalankan `scheduled()` setiap p
 | Kunci | Fungsi | Default |
 | --- | --- | --- |
 | `VITE_API_BASE_URL` | Origin Worker tanpa suffix `/api`. Dipakai RTK Query & offline replay. | `http://127.0.0.1:8787` |
+| `VITE_ENABLE_ONLINE_AI` | `true` untuk mengaktifkan diagnosis online (Gemini) ketika confidence lokal < 65%. | `false` |
 
 ### Worker (atur melalui `wrangler.toml` atau `wrangler secret put`)
 
@@ -202,6 +204,7 @@ Tambahan: cron Worker (lihat `wrangler.toml`) menjalankan `scheduled()` setiap p
 | `R2_LOCAL_BASE` | Origin Miniflare R2 lokal (`http://127.0.0.1:8787/r2`). |
 | `R2_BUCKET` | Nama bucket default saat membuat URL lokal. |
 | `RESEND_API_KEY` | API key Resend untuk email reset password. |
+| `GEMINI_API_KEY` | API key Gemini untuk diagnosis online. Jangan expose ke Vite; simpan hanya di Worker secret. |
 
 ### Cloudflare binding
 
@@ -226,6 +229,7 @@ Defined pada `wrangler.toml`:
 - **Antrean offline tidak tersinkron** - cek tab Application -> IndexedDB (`aitani-web`). Pastikan pengguna sudah login; sinkronisasi hanya berjalan ketika `selectIsAuthenticated` bernilai true.
 - **R2 403/404** - verifikasi `PUBLIC_R2_BASE_URL`, `R2_BUCKET`, serta binding `R2` di `wrangler.toml`. Untuk lokal, jalankan Worker dengan `--persist-to` agar file tersimpan di `.wrangler/state/v3/r2`.
 - **Email reset tidak terkirim** - pastikan `RESEND_API_KEY` terset dan domain sudah diverifikasi di Resend. Endpoint akan mengembalikan error detail bila gagal.
+- **API key keamanan** - simpan `GEMINI_API_KEY` hanya sebagai secret Worker (bukan `VITE_*`). Endpoint `/api/diagnosis/online` tidak membocorkan key; FE hanya mengirim foto + meta ke backend.
 
 ## Referensi internal
 

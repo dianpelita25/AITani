@@ -26,6 +26,7 @@ const fileToDataURL = (file) =>
 
 const PhotoDiagnosis = () => {
   const navigate = useNavigate();
+  const ENABLE_ONLINE_AI = (import.meta.env.VITE_ENABLE_ONLINE_AI ?? 'true') === 'true';
   const [currentStep, setCurrentStep] = useState('capture');
   const [capturedImage, setCapturedImage] = useState(null);
   const [formData, setFormData] = useState(null);
@@ -33,7 +34,7 @@ const PhotoDiagnosis = () => {
   const [diagnosisResult, setDiagnosisResult] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const [createDiagnosis, { isLoading: isUploading }] = useCreateDiagnosisMutation();
+  const [createDiagnosis] = useCreateDiagnosisMutation();
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -56,64 +57,126 @@ const PhotoDiagnosis = () => {
     setCurrentStep('capture');
   };
 
+  const buildNavigationPayload = (base, opts = {}) => {
+    const { diagnosis, recommendations, source, provider, modelVersion, timestamp } = base || {};
+    const imageUrl = base?.photo?.url || opts.fallbackImageUrl || '';
+
+    return {
+      diagnosis,
+      recommendations: recommendations || [],
+      source: source || opts.fallbackSource || 'offline-local',
+      provider: provider || opts.fallbackProvider || null,
+      modelVersion: modelVersion || opts.fallbackModelVersion || null,
+      timestamp: timestamp || new Date().toISOString(),
+      image: {
+        url: imageUrl,
+        cropType: opts.cropType || 'Unknown',
+        location: {
+          latitude: opts.latitude,
+          longitude: opts.longitude,
+          address: opts.fieldId || 'Lahan',
+        },
+      },
+      meta: {
+        fieldId: opts.fieldId,
+        cropType: opts.cropType,
+        latitude: opts.latitude,
+        longitude: opts.longitude,
+        notes: opts.notes,
+      },
+      onlineResult: base?.onlineResult || null,
+      localResult: base?.localResult || null,
+    };
+  };
+
   const handleFormSubmit = async (data) => {
     setIsProcessing(true);
     setFormData(data);
     const submissionData = { ...data, photo: capturedImage };
+    const isCurrentlyOnline = navigator.onLine;
+    const imageDataUrl = capturedImage ? await fileToDataURL(capturedImage) : '';
 
-    const localDiagnosisPromise = runLocalDiagnosis(capturedImage).catch(e => {
-      console.warn('Local diagnosis failed, will rely on server:', e?.message || e);
-      return null;
-    });
-    
-    const serverDiagnosisPromise = createDiagnosis(submissionData).unwrap().catch(async (error) => {
-      console.error('Gagal mengirim diagnosis, menyimpan ke antrean:', error);
-      const offlinePayload = { ...submissionData };
+    let serverResult = null;
+    if (ENABLE_ONLINE_AI && isCurrentlyOnline) {
+      try {
+        serverResult = await createDiagnosis(submissionData).unwrap();
+      } catch (error) {
+        console.error('Gagal mengirim diagnosis online, akan fallback ke lokal + antrean:', error);
+      }
+    }
+
+    let localResult = null;
+    if (!serverResult) {
+      try {
+        localResult = await runLocalDiagnosis(capturedImage);
+      } catch (e) {
+        console.warn('Local diagnosis failed:', e?.message || e);
+      }
+    }
+
+    if (!serverResult && !localResult) {
+      alert('Gagal melakukan diagnosis. Silakan periksa koneksi Anda dan coba lagi.');
+      setIsProcessing(false);
+      setCurrentStep('form');
+      return;
+    }
+
+    // Jika server gagal, antrekan untuk sinkronisasi dengan menyertakan localResult
+    if (!serverResult) {
+      const offlinePayload = {
+        ...submissionData,
+        localResult: JSON.stringify(localResult || {}),
+        timestamp: new Date().toISOString(),
+      };
 
       if (submissionData.photo instanceof File) {
         try {
-          offlinePayload.photo = await fileToDataURL(submissionData.photo);
+          offlinePayload.photo = imageDataUrl;
           offlinePayload.photoName = submissionData.photo.name;
         } catch (fileError) {
           console.error('Gagal mengubah file ke Data URL:', fileError);
           offlinePayload.photo = null;
         }
       }
-      await enqueueRequest({ type: 'createDiagnosis', payload: offlinePayload });
-      return null;
-    });
 
-    const [localResult, serverResult] = await Promise.all([localDiagnosisPromise, serverDiagnosisPromise]);
+      try {
+        await enqueueRequest({ type: 'createDiagnosis', payload: offlinePayload });
+      } catch (queueError) {
+        console.error('Gagal menambahkan ke antrean offline:', queueError);
+      }
+    }
 
-    const finalResult = localResult ?? serverResult ?? null;
-
-    // --- PERBAIKAN: kirim juga data foto + metadata form ke halaman hasil ---
-    if (finalResult) {
-      const imageDataUrl = capturedImage ? await fileToDataURL(capturedImage) : '';
-      const diagnosisDataForNextPage = {
-        ...finalResult,
-        timestamp: finalResult?.timestamp || new Date().toISOString(),
-        image: {
-          url: imageDataUrl,
-          cropType: data?.crop_type || 'Unknown',
-          location: {
+    const finalPayload = serverResult
+      ? buildNavigationPayload(serverResult, {
+          fallbackImageUrl: imageDataUrl,
+          fieldId: data?.field_id,
+          cropType: data?.crop_type,
+          latitude: data?.latitude,
+          longitude: data?.longitude,
+          notes: data?.notes,
+        })
+      : buildNavigationPayload(
+          {
+            diagnosis: localResult?.diagnosis,
+            recommendations: localResult?.recommendations,
+            source: 'offline-local',
+            provider: 'local-tfjs',
+            modelVersion: 'local-v1',
+            localResult,
+          },
+          {
+            fallbackImageUrl: imageDataUrl,
+            fieldId: data?.field_id,
+            cropType: data?.crop_type,
             latitude: data?.latitude,
             longitude: data?.longitude,
-            address: data?.field_id || 'Lahan',
-          },
-        },
-      };
+            notes: data?.notes,
+          }
+        );
 
-      navigate('/diagnosis-results', {
-        state: { diagnosisData: diagnosisDataForNextPage },
-      });
-    } else {
-      // Jika keduanya (lokal dan server) gagal, beri tahu pengguna.
-      alert("Gagal melakukan diagnosis. Silakan periksa koneksi Anda dan coba lagi.");
-      setIsProcessing(false);
-      setCurrentStep('form'); // Kembali ke form jika gagal total
-    }
-    // Kita tidak lagi butuh setIsProcessing(false) di sini karena halaman akan berganti.
+    navigate('/diagnosis-results', {
+      state: { diagnosisData: finalPayload },
+    });
   };
 
   const handleStartNew = () => {

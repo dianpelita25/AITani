@@ -28,7 +28,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// .wrangler/tmp/bundle-0PikD3/checked-fetch.js
+// .wrangler/tmp/bundle-cTiKOR/checked-fetch.js
 function checkURL(request, init) {
   const url = request instanceof URL ? request : new URL(
     (typeof request === "string" ? new Request(request, init) : request).url
@@ -46,7 +46,7 @@ function checkURL(request, init) {
 }
 var urls;
 var init_checked_fetch = __esm({
-  ".wrangler/tmp/bundle-0PikD3/checked-fetch.js"() {
+  ".wrangler/tmp/bundle-cTiKOR/checked-fetch.js"() {
     urls = /* @__PURE__ */ new Set();
     __name(checkURL, "checkURL");
     globalThis.fetch = new Proxy(globalThis.fetch, {
@@ -82,11 +82,11 @@ var require_crypto = __commonJS({
   }
 });
 
-// .wrangler/tmp/bundle-0PikD3/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-cTiKOR/middleware-loader.entry.ts
 init_checked_fetch();
 init_modules_watch_stub();
 
-// .wrangler/tmp/bundle-0PikD3/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-cTiKOR/middleware-insertion-facade.js
 init_checked_fetch();
 init_modules_watch_stub();
 
@@ -4165,13 +4165,117 @@ init_checked_fetch();
 init_modules_watch_stub();
 var GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent";
 var PROMPT_TEXT = `
-Anda adalah agronom/botanis ahli tanaman pangan tropis. Analisis foto daun berikut:
-- Identifikasi penyakit/hama/defisiensi (singkat).
-- Berikan confidence 0-100, severity (ringan/sedang/berat).
-- Sertakan deskripsi 1-2 kalimat untuk petani.
-- Berikan 2 rekomendasi tindakan praktis (judul + instruksi ringkas).
-Balas ringkas dalam bahasa Indonesia.
+Anda adalah agronom/botanis ahli tanaman pangan tropis yang membantu PETANI KECIL.
+
+Analisis foto daun yang saya kirim. Tanaman bisa berupa jagung, padi, kedelai, cabai, tomat, atau tanaman pangan tropis lain.
+
+TUGAS ANDA:
+1. Tentukan penyakit/hama/kekurangan hara yang PALING MUNGKIN.
+2. Jelaskan dengan bahasa SEDERHANA untuk petani (tidak perlu istilah ilmiah rumit).
+3. Beri penilaian:
+   - tingkat risiko: "rendah" / "sedang" / "berat"
+   - kecepatan menyebar: "pelan" / "sedang" / "cepat"
+4. Jelaskan apa yang terjadi jika TIDAK diobati (dampak pada hasil panen, dalam berapa minggu).
+5. Berikan rekomendasi tindakan dalam 3 kelompok:
+   a) TINDAKAN SEGERA (hari ini/minggu ini)
+   b) PENANGANAN ALAMI/ORGANIK
+   c) PENANGANAN KIMIA (OBAT PERTANIAN)
+6. Tambahkan saran pencegahan untuk MUSIM BERIKUTNYA.
+7. Berikan informasi KEAMANAN untuk petani dan lingkungan.
+8. Jelaskan mengapa AI yakin (atau ragu) dengan diagnosis tersebut.
+
+PENTING TENTANG PENANGANAN KIMIA:
+- Fokus pada BAHAN AKTIF (misalnya: mankozeb, tembaga, dll.).
+- Berikan contoh CARA PAKAI: dosis per liter air, frekuensi aplikasi, dan peringatan keamanan.
+- SEBUTKAN 1\u20132 MEREK DAGANG YANG UMUM (bila Anda tahu contoh yang wajar) di field \`example_brands\`:
+  - \`low_cost\`: contoh merek yang cenderung lebih murah.
+  - \`better_option\`: contoh merek yang dinilai lebih baik kualitasnya.
+- Jika Anda tidak yakin dengan merek yang aman dan legal, BIARKAN field example_brands kosong.
+- Jangan menyarankan produk yang dilarang internasional atau sangat berbahaya. Fokus pada produk yang umum dipakai petani kecil dan terdaftar resmi di banyak negara.
+
+FORMAT JAWABAN:
+BALAS HANYA DALAM JSON VALID (tanpa penjelasan lain di luar JSON), dengan struktur PERSIS seperti ini:
+
+{
+  "disease": {
+    "name": "...",
+    "type": "jamur|bakteri|hama|virus|kekurangan_hara|campuran|tidak_pasti",
+    "aliases": ["...", "..."],
+    "short_summary": "...",
+    "risk_level": "rendah|sedang|berat",
+    "spread_speed": "pelan|sedang|cepat"
+  },
+  "causes": {
+    "pathogen": "...",
+    "conditions": ["...", "..."]
+  },
+  "danger_if_ignored": {
+    "summary": "...",
+    "yield_impact": "...",
+    "time_frame": "..."
+  },
+  "actions": {
+    "immediate": ["...", "..."],
+    "this_week": ["...", "..."]
+  },
+  "treatments": {
+    "organic": [
+      {
+        "id": "org_1",
+        "title": "...",
+        "description": "...",
+        "ingredients": ["...", "..."],
+        "steps": ["...", "..."],
+        "approx_cost": "sangat murah|murah|sedang|mahal",
+        "difficulty": "mudah|sedang|rumit",
+        "notes": "..."
+      }
+    ],
+    "chemical": [
+      {
+        "id": "chem_1",
+        "title": "...",
+        "description": "...",
+        "active_ingredient": "...",
+        "product_type": "...",
+        "example_brands": {
+          "low_cost": "...",
+          "better_option": "..."
+        },
+        "approx_cost": "sangat murah|murah|sedang|mahal",
+        "difficulty": "mudah|sedang|rumit",
+        "usage": {
+          "dose_per_liter": "...",
+          "frequency": "...",
+          "application_tips": ["...", "..."]
+        },
+        "safety": ["...", "..."],
+        "where_to_buy": "toko sarana pertanian lokal atau marketplace online",
+        "notes": "Gunakan hanya produk yang terdaftar resmi di negara setempat."
+      }
+    ]
+  },
+  "prevention": {
+    "crop_rotation": "...",
+    "spacing": "...",
+    "sanitation": "...",
+    "other": ["...", "..."]
+  },
+  "safety": {
+    "personal_protection": ["...", "..."],
+    "environment": ["...", "..."],
+    "harvest_interval": "..."
+  },
+  "confidence_explanation": {
+    "confidence_score": 0,
+    "reasoning": "...",
+    "when_to_recheck": ["...", "..."]
+  }
+}
+
+Jika Anda benar-benar tidak yakin dengan diagnosis (misalnya foto sangat buram), tetap isi struktur JSON yang sama tetapi tulis ketidakpastian Anda di field "short_summary" dan "reasoning".
 `;
+var DEFAULT_MODEL_VERSION = "online-v1";
 var getOptionalIdentity = /* @__PURE__ */ __name((c) => {
   try {
     return getIdentity(c);
@@ -4179,11 +4283,247 @@ var getOptionalIdentity = /* @__PURE__ */ __name((c) => {
     return { accountId: "anon", userId: "anon" };
   }
 }, "getOptionalIdentity");
+var arrayBufferToBase64 = /* @__PURE__ */ __name((buffer) => {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 32768;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}, "arrayBufferToBase64");
+var dataUrlToBase64 = /* @__PURE__ */ __name((dataUrl = "") => dataUrl.split(",").pop() || "", "dataUrlToBase64");
+var pickSeverity = /* @__PURE__ */ __name((confidence, fallback) => {
+  if (fallback) return fallback;
+  if (confidence >= 80) return "berat";
+  if (confidence >= 60) return "sedang";
+  return "ringan";
+}, "pickSeverity");
+var mockOnlineResult = /* @__PURE__ */ __name((meta = {}) => ({
+  source: "online-mock",
+  provider: "mock",
+  modelVersion: DEFAULT_MODEL_VERSION,
+  diagnosis: {
+    label: "Gray Leaf Spot (online mock)",
+    confidence: 80,
+    severity: "sedang",
+    description: "Mock online: bercak abu-abu terdeteksi."
+  },
+  recommendations: [
+    { id: "rec_online_mock_1", title: "Pantau bercak", description: "Monitor sebaran 2-3 hari.", priority: "sedang", timeframe: "2-3 hari" },
+    { id: "rec_online_mock_2", title: "Uji ulang bila perlu", description: "Jalankan ulang jika gejala makin parah.", priority: "rendah", timeframe: "Opsional" }
+  ],
+  rawResponse: { type: "mock", meta }
+}), "mockOnlineResult");
+var normalizeOnlineResponse = /* @__PURE__ */ __name((data = {}, { provider = "custom-api", modelVersion = DEFAULT_MODEL_VERSION } = {}) => {
+  const diag = data.diagnosis || {};
+  const label = diag.label || data.label || "Diagnosis AI";
+  const confidence = Math.round(diag.confidence ?? data.confidence ?? 80);
+  const severity = diag.severity || data.severity || pickSeverity(confidence);
+  const description = diag.description || data.description || "Diagnosis AI online.";
+  const recommendations = Array.isArray(diag.recommendations) ? diag.recommendations : Array.isArray(data.recommendations) ? data.recommendations : [];
+  return {
+    source: "online",
+    provider,
+    modelVersion: data.modelVersion || data.model_version || modelVersion,
+    diagnosis: { label, confidence, severity, description },
+    recommendations,
+    rawResponse: data
+  };
+}, "normalizeOnlineResponse");
+async function runGeminiDiagnosis({ env, imageBase64, meta }) {
+  console.log("[AI] runGeminiDiagnosis called, has apiKey?", !!env.GEMINI_API_KEY);
+  const apiKey = env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.log("[AI] Using mockOnlineResult (no GEMINI_API_KEY)");
+    return mockOnlineResult(meta);
+  }
+  const promptParts = [
+    { text: PROMPT_TEXT.trim() },
+    ...Object.keys(meta || {}).length ? [{ text: `Konteks tambahan: ${JSON.stringify(meta)}` }] : []
+  ];
+  const payload = {
+    contents: [
+      {
+        parts: [
+          ...promptParts,
+          {
+            inline_data: {
+              mime_type: "image/jpeg",
+              data: imageBase64
+            }
+          }
+        ]
+      }
+    ]
+  };
+  console.log("[AI] Calling Gemini API...");
+  const resp = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!resp.ok) {
+    const detail = await resp.text();
+    throw new Error(`Gemini error ${resp.status}: ${detail}`);
+  }
+  const data = await resp.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (err) {
+    console.warn("[runGeminiDiagnosis] JSON parse failed, fallback to mock", err?.message || err);
+    return mockOnlineResult({ meta, error: "JSON parse failed", rawText: text });
+  }
+  const disease = parsed?.disease || {};
+  const danger = parsed?.danger_if_ignored || {};
+  const conf = parsed?.confidence_explanation || {};
+  const label = disease.name || "Diagnosis AI (tidak pasti)";
+  const confidence = typeof conf.confidence_score === "number" ? conf.confidence_score : 80;
+  const severity = disease.risk_level || "sedang";
+  const description = disease.short_summary || danger.summary || "Ringkasan penyakit dari AI.";
+  const recommendations = [];
+  (parsed?.actions?.immediate || []).forEach((step, idx) => {
+    recommendations.push({
+      id: `act_immediate_${idx + 1}`,
+      title: `Segera lakukan ${idx + 1}`,
+      description: step,
+      category: "immediate",
+      priority: "tinggi",
+      timeframe: "hari ini - minggu ini"
+    });
+  });
+  (parsed?.treatments?.organic || []).forEach((t, idx) => {
+    recommendations.push({
+      id: t.id || `org_${idx + 1}`,
+      title: `Organik: ${t.title}`,
+      description: t.description,
+      category: "organic",
+      priority: "sedang",
+      timeframe: "beberapa hari"
+    });
+  });
+  (parsed?.treatments?.chemical || []).forEach((t, idx) => {
+    recommendations.push({
+      id: t.id || `chem_${idx + 1}`,
+      title: `Kimia: ${t.title}`,
+      description: t.description,
+      category: "chemical",
+      priority: "tinggi",
+      timeframe: "sesuai jadwal semprot"
+    });
+  });
+  return {
+    source: "online",
+    provider: "gemini",
+    modelVersion: data?.modelVersion || DEFAULT_MODEL_VERSION,
+    diagnosis: {
+      label,
+      confidence,
+      severity: pickSeverity(confidence, severity),
+      description
+    },
+    recommendations,
+    rawResponse: parsed
+  };
+}
+__name(runGeminiDiagnosis, "runGeminiDiagnosis");
+async function runOnlineDiagnosis({ env, imageBase64, meta }) {
+  console.log("[AI] AI_DIAG_ENDPOINT?", !!env.AI_DIAG_ENDPOINT);
+  console.log("[AI] GEMINI_API_KEY present?", !!env.GEMINI_API_KEY);
+  const timeoutMs = Number(env.AI_DIAG_TIMEOUT_MS || env.AI_TIMEOUT_MS || 2e4);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    if (env.AI_DIAG_ENDPOINT) {
+      console.log("[AI] Using AI_DIAG_ENDPOINT");
+      const endpoint = env.AI_DIAG_ENDPOINT;
+      const apiKey = env.AI_DIAG_API_KEY;
+      const provider = env.AI_DIAG_PROVIDER || "custom-api";
+      const modelVersion = env.AI_DIAG_MODEL_VERSION || DEFAULT_MODEL_VERSION;
+      const payload = {
+        image: `data:image/jpeg;base64,${imageBase64}`,
+        meta
+      };
+      const headers = { "Content-Type": "application/json" };
+      if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+      const resp = await fetch(endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      if (!resp.ok) {
+        const detail = await resp.text();
+        throw new Error(`AI endpoint error ${resp.status}: ${detail}`);
+      }
+      const data = await resp.json().catch(() => ({}));
+      return normalizeOnlineResponse(data, { provider, modelVersion });
+    }
+    if (env.GEMINI_API_KEY) {
+      console.log("[AI] Using Gemini fallback");
+      return await runGeminiDiagnosis({ env, imageBase64, meta });
+    }
+    console.log("[AI] Using mockOnlineResult (no AI online)");
+    return mockOnlineResult(meta);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+__name(runOnlineDiagnosis, "runOnlineDiagnosis");
+var normalizeFinalResponse = /* @__PURE__ */ __name(({
+  id,
+  timestamp,
+  source,
+  provider,
+  modelVersion,
+  diagnosis,
+  recommendations,
+  photoUrl,
+  photoKey,
+  photoName,
+  fieldId,
+  cropType,
+  latitude,
+  longitude,
+  notes,
+  localResult,
+  onlineResult
+}) => ({
+  id,
+  timestamp,
+  source,
+  provider,
+  modelVersion,
+  diagnosis,
+  recommendations,
+  photo: {
+    url: photoUrl,
+    key: photoKey,
+    name: photoName
+  },
+  meta: {
+    fieldId,
+    cropType,
+    latitude,
+    longitude,
+    notes
+  },
+  localResult: localResult || null,
+  onlineResult: onlineResult || null
+}), "normalizeFinalResponse");
 async function handleGetDiagnosisHistory(c) {
   const { accountId, userId } = getIdentity(c);
   const db = c.env.DB;
   const { results } = await db.prepare("SELECT * FROM diagnosis WHERE account_id = ? AND user_id = ? AND deleted_at IS NULL ORDER BY timestamp DESC").bind(accountId, userId).all();
-  const parseDiagnosis = /* @__PURE__ */ __name((d) => ({ ...d, recommendations: parseMaybeJson(d.recommendations) }), "parseDiagnosis");
+  const parseDiagnosis = /* @__PURE__ */ __name((d) => ({
+    ...d,
+    recommendations: parseMaybeJson(d.recommendations),
+    online_result_json: parseMaybeJson(d.online_result_json),
+    local_result_json: parseMaybeJson(d.local_result_json),
+    raw_response_json: parseMaybeJson(d.raw_response_json)
+  }), "parseDiagnosis");
   return json(results.map(parseDiagnosis), 200, c.env, c.req.raw);
 }
 __name(handleGetDiagnosisHistory, "handleGetDiagnosisHistory");
@@ -4200,10 +4540,16 @@ async function handleCreateDiagnosis(c) {
   let diagPhotoName = null;
   let diagPhotoUrl = null;
   let diagPhotoKey = null;
+  let imageBase64 = "";
+  if (typeof photoFile === "string") {
+    imageBase64 = dataUrlToBase64(photoFile);
+  }
   if (photoFile instanceof File && r2) {
     const sanitized = sanitizeFileName(photoFile.name || `diagnosis_${Date.now()}.jpg`);
     diagPhotoKey = `diagnosis/${accountId}/${userId}/${Date.now()}_${sanitized}`;
-    await r2.put(diagPhotoKey, await photoFile.arrayBuffer(), {
+    const buffer = await photoFile.arrayBuffer();
+    imageBase64 = arrayBufferToBase64(buffer);
+    await r2.put(diagPhotoKey, buffer, {
       httpMetadata: {
         contentType: photoFile.type || guessContentType2(sanitized),
         cacheControl: "public, max-age=31536000, immutable"
@@ -4211,22 +4557,99 @@ async function handleCreateDiagnosis(c) {
     });
     diagPhotoName = sanitized;
     diagPhotoUrl = buildPhotoUrl(request, env, diagPhotoKey);
+  } else if (photoFile instanceof File && !r2) {
+    const buffer = await photoFile.arrayBuffer();
+    imageBase64 = arrayBufferToBase64(buffer);
+    diagPhotoName = photoFile.name || null;
   }
-  const mockAiResult = {
-    diagnosis: {
-      label: "Bercak Daun (dari Server D1)",
-      confidence: 92.3,
-      severity: "sedang",
-      description: "Disimpan permanen di D1."
-    },
-    recommendations: [
-      { id: "rec_d1_1", title: "Rekomendasi Server 1", description: "Deskripsi 1.", priority: "tinggi", timeframe: "1-2 hari" }
-    ]
+  const meta = {
+    field_id: submissionData.field_id,
+    crop_type: submissionData.crop_type,
+    latitude: submissionData.latitude,
+    longitude: submissionData.longitude,
+    notes: submissionData.notes
   };
+  const localResult = submissionData.localResult ? parseMaybeJson(submissionData.localResult) : null;
+  let onlineResult = null;
+  let onlineError = null;
+  if (imageBase64) {
+    try {
+      onlineResult = await runOnlineDiagnosis({ env, imageBase64, meta });
+    } catch (err) {
+      onlineError = err?.message || String(err);
+      console.warn("[handleCreateDiagnosis] online AI failed, will fallback to localResult:", onlineError);
+    }
+  }
+  const finalResult = onlineResult || localResult || mockOnlineResult(meta);
+  const source = onlineResult ? onlineResult.source || "online" : localResult ? localResult.source || "offline-local" : finalResult.source || "online-mock";
+  const provider = onlineResult?.provider || localResult?.provider || "local";
+  const modelVersion = onlineResult?.modelVersion || localResult?.modelVersion || DEFAULT_MODEL_VERSION;
+  const diagnosis = finalResult.diagnosis || {
+    label: "Diagnosis",
+    confidence: 0,
+    severity: "ringan",
+    description: "Tidak ada detail"
+  };
+  const recommendations = Array.isArray(finalResult.recommendations) ? finalResult.recommendations : [];
   const id = `diag_${Date.now()}`;
   const now = (/* @__PURE__ */ new Date()).toISOString();
-  await db.prepare(`INSERT INTO diagnosis (id, timestamp, field_id, crop_type, latitude, longitude, notes, photo_name, photo_url, result_label, result_confidence, result_severity, result_description, recommendations, account_id, user_id, created_at, created_by, updated_at, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(id, submissionData.timestamp || now, submissionData.field_id, submissionData.crop_type, submissionData.latitude, submissionData.longitude, submissionData.notes, diagPhotoName, diagPhotoUrl, mockAiResult.diagnosis.label, mockAiResult.diagnosis.confidence, mockAiResult.diagnosis.severity, mockAiResult.diagnosis.description, JSON.stringify(mockAiResult.recommendations), accountId, userId, now, userId, now, userId).run();
-  return json({ success: true, ...mockAiResult }, 201, env, request);
+  const timestamp = submissionData.timestamp || now;
+  await db.prepare(`INSERT INTO diagnosis (
+            id, timestamp, field_id, crop_type, latitude, longitude, notes,
+            photo_name, photo_url, photo_key,
+            result_label, result_confidence, result_severity, result_description, recommendations,
+            result_source, model_version, provider,
+            online_result_json, local_result_json, raw_response_json,
+            account_id, user_id, created_at, created_by, updated_at, updated_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(
+    id,
+    timestamp,
+    submissionData.field_id,
+    submissionData.crop_type,
+    submissionData.latitude,
+    submissionData.longitude,
+    submissionData.notes,
+    diagPhotoName,
+    diagPhotoUrl,
+    diagPhotoKey,
+    diagnosis.label,
+    diagnosis.confidence,
+    diagnosis.severity,
+    diagnosis.description,
+    JSON.stringify(recommendations),
+    source,
+    modelVersion,
+    provider,
+    onlineResult ? JSON.stringify(onlineResult) : null,
+    localResult ? JSON.stringify(localResult) : null,
+    onlineResult?.rawResponse ? JSON.stringify(onlineResult.rawResponse) : null,
+    accountId,
+    userId,
+    now,
+    userId,
+    now,
+    userId
+  ).run();
+  const responsePayload = normalizeFinalResponse({
+    id,
+    timestamp,
+    source,
+    provider,
+    modelVersion,
+    diagnosis,
+    recommendations,
+    photoUrl: diagPhotoUrl,
+    photoKey: diagPhotoKey,
+    photoName: diagPhotoName,
+    fieldId: submissionData.field_id,
+    cropType: submissionData.crop_type,
+    latitude: submissionData.latitude,
+    longitude: submissionData.longitude,
+    notes: submissionData.notes,
+    localResult,
+    onlineResult: onlineResult || (onlineError ? { error: onlineError } : null)
+  });
+  return json(responsePayload, 201, env, request);
 }
 __name(handleCreateDiagnosis, "handleCreateDiagnosis");
 async function handleOnlineDiagnosis(c) {
@@ -4244,76 +4667,9 @@ async function handleOnlineDiagnosis(c) {
   if (!image || typeof image !== "string") {
     return json({ error: "image (data URL) wajib dikirim" }, 400, env, request);
   }
-  const apiKey = env.GEMINI_API_KEY;
-  const base64 = image.split(",").pop();
-  if (!apiKey) {
-    return json({
-      source: "online-mock",
-      provider: "gemini",
-      diagnosis: {
-        label: "Gray Leaf Spot (online mock)",
-        confidence: 82,
-        severity: "sedang",
-        description: "Mock Gemini: bercak abu-abu terdeteksi."
-      },
-      recommendations: [
-        { id: "rec_online_1", title: "Pantau bercak", description: "Monitor sebaran 2-3 hari.", priority: "sedang", timeframe: "2-3 hari" },
-        { id: "rec_online_2", title: "Uji ulang bila perlu", description: "Jalankan ulang jika gejala makin parah.", priority: "rendah", timeframe: "Opsional" }
-      ],
-      meta
-    }, 200, env, request);
-  }
   try {
-    const promptParts = [
-      { text: PROMPT_TEXT.trim() },
-      ...Object.keys(meta || {}).length ? [{ text: `Konteks tambahan: ${JSON.stringify(meta)}` }] : []
-    ];
-    const payload = {
-      contents: [
-        {
-          parts: [
-            ...promptParts,
-            {
-              inline_data: {
-                mime_type: "image/jpeg",
-                data: base64
-              }
-            }
-          ]
-        }
-      ]
-    };
-    console.log("[onlineDiagnosis] request ke Gemini, account:", accountId, "user:", userId);
-    const resp = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    if (!resp.ok) {
-      const detail = await resp.text();
-      console.warn("[onlineDiagnosis] Gemini non-OK", resp.status, detail);
-      return json({ source: "online", provider: "gemini", error: `Gemini error ${resp.status}`, detail }, resp.status, env, request);
-    }
-    const data = await resp.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    const matchConf = /(\d{1,3})%/.exec(text);
-    const confidence = matchConf ? Math.min(100, parseInt(matchConf[1], 10)) : 80;
-    const result = {
-      source: "online",
-      provider: "gemini",
-      raw: text,
-      diagnosis: {
-        label: text || "Diagnosis Gemini",
-        confidence,
-        severity: confidence > 80 ? "sedang" : "ringan",
-        description: text || "Diagnosis AI (Gemini)."
-      },
-      recommendations: [
-        { id: "rec_online_1", title: "Pantau gejala", description: "Periksa perkembangan dalam 2-3 hari.", priority: "sedang", timeframe: "2-3 hari" },
-        { id: "rec_online_2", title: "Konsultasi lanjut", description: "Jika gejala memburuk, lakukan uji ulang dan konsultasi.", priority: "rendah", timeframe: "Opsional" }
-      ],
-      meta
-    };
+    const base64 = dataUrlToBase64(image);
+    const result = await runOnlineDiagnosis({ env, imageBase64: base64, meta: { ...meta, accountId, userId } });
     return json(result, 200, env, request);
   } catch (err) {
     return json({ error: "Online diagnosis failed", detail: err?.message || err }, 500, env, request);
@@ -4653,7 +5009,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-0PikD3/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-cTiKOR/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -4687,7 +5043,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-0PikD3/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-cTiKOR/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

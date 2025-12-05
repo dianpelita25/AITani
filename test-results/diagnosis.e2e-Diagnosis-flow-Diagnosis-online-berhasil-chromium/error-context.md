@@ -1,0 +1,164 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e5]:
+    - generic [ref=e7]:
+      - button "Kembali" [ref=e8] [cursor=pointer]:
+        - img [ref=e9]
+      - generic [ref=e11]:
+        - generic [ref=e12]: AI Tani Kupang
+        - generic [ref=e13]: Web
+      - navigation [ref=e14]:
+        - list [ref=e15]:
+          - listitem [ref=e16]:
+            - button "Beranda" [ref=e17] [cursor=pointer]:
+              - img [ref=e18]
+              - generic [ref=e21]: Beranda
+          - listitem [ref=e22]:
+            - button "Diagnosis" [ref=e23] [cursor=pointer]:
+              - img [ref=e24]
+              - generic [ref=e27]: Diagnosis
+          - listitem [ref=e28]:
+            - button "Kalender" [ref=e29] [cursor=pointer]:
+              - img [ref=e30]
+              - generic [ref=e32]: Kalender
+          - listitem [ref=e33]:
+            - button "Komunitas" [ref=e34] [cursor=pointer]:
+              - img [ref=e35]
+              - generic [ref=e37]: Komunitas
+          - listitem [ref=e38]:
+            - button "Riwayat" [ref=e39] [cursor=pointer]:
+              - img [ref=e40]
+              - generic [ref=e44]: Riwayat
+      - generic [ref=e45]:
+        - generic [ref=e46]: Hasil Diagnosis
+        - generic [ref=e47]: Ringkasan analisis & rekomendasi
+  - generic [ref=e51]:
+    - generic [ref=e52]:
+      - button [ref=e53] [cursor=pointer]:
+        - img [ref=e54]
+      - generic [ref=e56]:
+        - heading "Hasil Diagnosis" [level=1] [ref=e57]
+        - paragraph [ref=e58]: Analisis AI Tanaman
+    - button "Bagikan" [ref=e59] [cursor=pointer]:
+      - img [ref=e60]
+      - text: Bagikan
+  - generic [ref=e63]:
+    - generic [ref=e64]:
+      - generic [ref=e65]:
+        - generic [ref=e66]:
+          - img "Foto tanaman yang dianalisis" [ref=e67]
+          - generic [ref=e68]: jagung
+        - generic [ref=e70]:
+          - generic [ref=e71]:
+            - img [ref=e72]
+            - generic [ref=e74]: 5 Desember 2025 pukul 13.19
+          - generic [ref=e75]:
+            - img [ref=e76]
+            - generic [ref=e79]: LAHAN-1764911974495
+      - generic [ref=e80]:
+        - generic [ref=e81]:
+          - generic [ref=e82]:
+            - heading "Gray Leaf Spot (online mock)" [level=3] [ref=e83]
+            - generic [ref=e84]:
+              - generic [ref=e85]:
+                - img [ref=e86]
+                - text: AI (local)
+              - generic [ref=e89]:
+                - img [ref=e90]
+                - text: Model online-v1
+            - paragraph [ref=e92]: "Mock online: bercak abu-abu terdeteksi."
+          - generic [ref=e93]:
+            - generic [ref=e94]: 80%
+            - paragraph [ref=e95]: Akurasi
+        - generic [ref=e96]:
+          - generic [ref=e97]:
+            - img [ref=e98]
+            - text: "Tingkat: sedang"
+          - generic [ref=e100]:
+            - img [ref=e101]
+            - text: AI Analysis
+      - generic [ref=e103]:
+        - generic [ref=e104]:
+          - heading "Rekomendasi Tindakan" [level=3] [ref=e105]
+          - generic [ref=e106]: 2 rekomendasi
+        - generic [ref=e107]:
+          - generic [ref=e108]:
+            - generic [ref=e109]:
+              - generic [ref=e110]:
+                - img [ref=e111]
+                - heading "Pantau bercak" [level=4] [ref=e113]
+              - paragraph [ref=e114]: Monitor sebaran 2-3 hari.
+            - generic [ref=e115]: sedang
+          - generic [ref=e116]:
+            - heading "Langkah Implementasi:" [level=5] [ref=e117]
+            - list
+          - generic [ref=e118]:
+            - generic [ref=e119]:
+              - generic [ref=e120]:
+                - img [ref=e121]
+                - generic [ref=e124]: Waktu Terbaik
+              - paragraph
+            - generic [ref=e125]:
+              - generic [ref=e126]:
+                - img [ref=e127]
+                - generic [ref=e129]: Estimasi Biaya
+              - paragraph
+          - generic [ref=e131]:
+            - img [ref=e132]
+            - generic [ref=e136]:
+              - paragraph [ref=e137]: "Hasil yang Diharapkan:"
+              - paragraph
+          - button "Simpan ke Rencana" [ref=e138] [cursor=pointer]:
+            - img [ref=e139]
+            - text: Simpan ke Rencana
+        - generic [ref=e141]:
+          - generic [ref=e142]:
+            - generic [ref=e143]:
+              - generic [ref=e144]:
+                - img [ref=e145]
+                - heading "Uji ulang bila perlu" [level=4] [ref=e147]
+              - paragraph [ref=e148]: Jalankan ulang jika gejala makin parah.
+            - generic [ref=e149]: rendah
+          - generic [ref=e150]:
+            - heading "Langkah Implementasi:" [level=5] [ref=e151]
+            - list
+          - generic [ref=e152]:
+            - generic [ref=e153]:
+              - generic [ref=e154]:
+                - img [ref=e155]
+                - generic [ref=e158]: Waktu Terbaik
+              - paragraph
+            - generic [ref=e159]:
+              - generic [ref=e160]:
+                - img [ref=e161]
+                - generic [ref=e163]: Estimasi Biaya
+              - paragraph
+          - generic [ref=e165]:
+            - img [ref=e166]
+            - generic [ref=e170]:
+              - paragraph [ref=e171]: "Hasil yang Diharapkan:"
+              - paragraph
+          - button "Simpan ke Rencana" [ref=e172] [cursor=pointer]:
+            - img [ref=e173]
+            - text: Simpan ke Rencana
+    - generic [ref=e175]:
+      - generic [ref=e176]:
+        - button "Bagikan Hasil" [ref=e177] [cursor=pointer]:
+          - img [ref=e178]
+          - text: Bagikan Hasil
+        - button "Simpan Semua" [ref=e181] [cursor=pointer]:
+          - img [ref=e182]
+          - text: Simpan Semua
+      - generic [ref=e186]:
+        - button "Diagnosis Lagi" [ref=e187] [cursor=pointer]:
+          - img [ref=e188]
+          - text: Diagnosis Lagi
+        - button "Lihat Kalender" [ref=e191] [cursor=pointer]:
+          - img [ref=e192]
+          - text: Lihat Kalender
+      - button "Cek Peringatan Komunitas" [ref=e194] [cursor=pointer]:
+        - img [ref=e195]
+        - text: Cek Peringatan Komunitas
+```
