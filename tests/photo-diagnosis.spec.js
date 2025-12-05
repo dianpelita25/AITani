@@ -1,11 +1,11 @@
 // tests/photo-diagnosis.spec.js
-// End-to-end: unggah foto, isi form, kirim diagnosis lokal, dan tunggu halaman hasil.
+// End-to-end: unggah foto, isi form, kirim diagnosis lokal/online, dan tunggu halaman hasil.
 import { test, expect } from '@playwright/test';
 import path from 'path';
 
 const photoPath = path.resolve('public/demo/foto1.jpg');
 
-test('unggah foto dan kirim diagnosis lokal', async ({ page }) => {
+test('unggah foto dan kirim diagnosis', async ({ page }) => {
   await page.goto('/photo-diagnosis');
 
   // Upload foto
@@ -25,8 +25,7 @@ test('unggah foto dan kirim diagnosis lokal', async ({ page }) => {
   await expect(submitBtn).toBeEnabled({ timeout: 15000 });
   await submitBtn.click();
 
-  // Tunggu loading dialog hilang lalu halaman hasil
-  await page.getByText(/Menganalisis foto tanaman/i).waitFor({ state: 'hidden', timeout: 60000 });
+  // Tunggu halaman hasil
   await page.waitForURL('**/diagnosis-results**', { timeout: 60000 });
   await expect(page.getByRole('heading', { name: 'Hasil Diagnosis' })).toBeVisible({ timeout: 15000 });
 });

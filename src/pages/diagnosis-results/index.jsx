@@ -7,14 +7,16 @@ import { useCreateFarmTaskMutation } from '../../services/farmTasksApi';
 import DiagnosisHeader from './components/DiagnosisHeader';
 import CropImageDisplay from './components/CropImageDisplay';
 import DiagnosisCard from './components/DiagnosisCard';
-import EnvironmentalFactors from './components/EnvironmentalFactors';
 import RecommendationCard from './components/RecommendationCard';
 import ActionButtons from './components/ActionButtons';
-import OfflineIndicator from './components/OfflineIndicator';
 import ShareActionSheet from '../../components/ui/ShareActionSheet';
 import LoadingOverlay from '../../components/ui/LoadingOverlay';
 import BottomNavigation from '../../components/ui/BottomNavigation';
 import DesktopTopNav from '../../components/layout/DesktopTopNav';
+import ActionTodayCard from './components/ActionTodayCard';
+import RiskIfIgnoredCard from './components/RiskIfIgnoredCard';
+import TreatmentsCard from './components/TreatmentsCard';
+import SafetyAndConfidenceCard from './components/SafetyAndConfidenceCard';
 
 const DiagnosisResults = () => {
   const location = useLocation();
@@ -25,15 +27,23 @@ const DiagnosisResults = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSaving, setIsSaving] = useState(false);
 
-  const mockDiagnosisData = {
+  const fallbackData = {
     image: { url: '', cropType: 'Unknown', location: { address: 'Lahan Utama' } },
-    diagnosis: { label: 'Bercak Daun (dari Server D1)', confidence: 92.3, description: 'Disimpan permanen di D1.' },
-    environmentalFactors: [],
-    recommendations: [{ id: 'rec_d1_1', title: 'Rekomendasi Server 1', description: 'Deskripsi 1.', priority: 'tinggi', timing: '1 hari' }],
+    diagnosis: { label: 'Diagnosis', confidence: 0, description: 'Tidak ada data diagnosis.' },
+    recommendations: [],
     timestamp: new Date().toISOString(),
+    source: 'unknown',
   };
 
-  const diagnosisData = location?.state?.diagnosisData || mockDiagnosisData;
+  const diagnosisData = location?.state?.diagnosisData || fallbackData;
+  const debugInfo = diagnosisData?.debug;
+  const aiDetails = diagnosisData?.onlineResult?.rawResponse || null;
+  const showDebugAi = (() => {
+    if (!aiDetails) return false;
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('debugAi') === '1';
+  })();
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -103,8 +113,6 @@ const DiagnosisResults = () => {
       {/* BODY dalam container */}
       <div className="mx-auto w-full max-w-screen-xl px-4 md:px-6 lg:px-8 pb-20">
         <div className="pt-4 space-y-6">
-          <OfflineIndicator isOnline={isOnline} />
-
           <CropImageDisplay
             imageUrl={diagnosisData.image?.url}
             cropType={diagnosisData.image?.cropType}
@@ -112,9 +120,44 @@ const DiagnosisResults = () => {
             location={diagnosisData.image?.location}
           />
 
-          <DiagnosisCard diagnosis={diagnosisData.diagnosis} />
+          <DiagnosisCard
+            diagnosis={diagnosisData.diagnosis}
+            source={diagnosisData.source}
+            provider={diagnosisData.provider}
+            modelVersion={diagnosisData.modelVersion}
+          />
 
-          <EnvironmentalFactors factors={diagnosisData.environmentalFactors} />
+          {showDebugAi && (
+            <div className="border border-dashed border-muted rounded-md p-3 text-xs text-muted-foreground space-y-1 bg-muted/30">
+              <div className="font-semibold text-foreground">Debug AI JSON</div>
+              <pre className="whitespace-pre-wrap break-words text-[11px] leading-snug">
+                {JSON.stringify(aiDetails, null, 2)}
+              </pre>
+            </div>
+          )}
+
+          {aiDetails && (
+            <>
+              <ActionTodayCard actions={aiDetails.actions} />
+              <RiskIfIgnoredCard danger={aiDetails.danger_if_ignored} />
+              <TreatmentsCard treatments={aiDetails.treatments} />
+              <SafetyAndConfidenceCard
+                safety={aiDetails.safety}
+                confidence={aiDetails.confidence_explanation}
+              />
+            </>
+          )}
+
+          {debugInfo && (
+            <div className="border border-dashed border-muted rounded-md p-3 text-xs text-muted-foreground space-y-1 bg-muted/30">
+              <div className="font-semibold text-foreground">Debug Online</div>
+              <div>onlineAttempted: {String(debugInfo.onlineAttempted)}</div>
+              <div>onlineUsed: {String(debugInfo.onlineUsed)}</div>
+              <div>onlineError: {debugInfo.onlineError || '-'}</div>
+              <div>onlineEnabled: {String(debugInfo.onlineEnabled)}</div>
+              <div>wasOnline: {String(debugInfo.wasOnline)}</div>
+            </div>
+          )}
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">

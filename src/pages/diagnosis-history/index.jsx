@@ -13,9 +13,24 @@ const DiagnosisHistory = () => {
   const { data: history = [], isLoading, isError } = useGetDiagnosisHistoryQuery();
 
   const handleViewDetails = (historyItem) => {
+    const recommendations = Array.isArray(historyItem.recommendations)
+      ? historyItem.recommendations
+      : [
+          {
+            id: 'rec_fallback_1',
+            title: `Tindakan untuk ${historyItem.result_label}`,
+            description: 'Ikuti anjuran ahli pertanian sesuai kondisi lapangan.',
+            priority: 'sedang',
+            timing: 'Segera',
+          },
+        ];
+
     const diagnosisDataForNextPage = {
       id: historyItem.id,
       timestamp: historyItem.timestamp,
+      source: historyItem.result_source || 'unknown',
+      provider: historyItem.provider || null,
+      modelVersion: historyItem.model_version || null,
       image: {
         url: historyItem.photo_url || null,
         cropType: historyItem.crop_type,
@@ -32,27 +47,7 @@ const DiagnosisHistory = () => {
         severity: historyItem.result_severity,
         affectedAreas: [],
       },
-      recommendations: [
-        {
-          id: 'rec_hist_1',
-          title: `Tindakan untuk ${historyItem.result_label}`,
-          description: 'Lakukan penanganan sesuai anjuran ahli pertanian.',
-          priority: 'sedang',
-          timing: 'Segera',
-          steps: ['Amati gejala secara berkala.', 'Konsultasikan dengan ahli jika gejala memburuk.'],
-          costEstimate: 'Rendah',
-        },
-        {
-          id: 'rec_hist_2',
-          title: 'Pencegahan di Masa Depan',
-          description:
-            'Jaga kebersihan lahan dan lakukan rotasi tanaman untuk musim tanam berikutnya.',
-          priority: 'rendah',
-          timing: 'Musim Tanam Berikutnya',
-          steps: ['Bersihkan gulma dan sisa tanaman.', 'Pilih varietas yang lebih tahan penyakit.'],
-          costEstimate: 'Rendah',
-        },
-      ],
+      recommendations,
       environmentalFactors: [],
     };
 

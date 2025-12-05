@@ -1,7 +1,7 @@
 import React from 'react';
 import Icon from '../../../components/AppIcon';
 
-const DiagnosisCard = ({ diagnosis }) => {
+const DiagnosisCard = ({ diagnosis, source, provider, modelVersion }) => {
   const getSeverityColor = (severity) => {
     switch (severity?.toLowerCase()) {
       case 'ringan':
@@ -28,6 +28,18 @@ const DiagnosisCard = ({ diagnosis }) => {
           <h3 className="text-lg font-semibold text-foreground mb-2">
             {diagnosis?.label}
           </h3>
+          <div className="flex flex-wrap gap-2">
+            <div className="inline-flex items-center px-2 py-1 rounded-md border text-[10px] font-semibold bg-muted/60 text-muted-foreground border-border">
+              <Icon name={source === 'online' ? 'Cloud' : 'Cpu'} size={12} className="mr-1" />
+              {source === 'online' ? 'AI Online' : source === 'offline-local' ? 'AI Lokal' : 'AI'}{provider ? ` (${provider})` : ''}
+            </div>
+            {modelVersion && (
+              <div className="inline-flex items-center px-2 py-1 rounded-md border text-[10px] font-semibold bg-muted/60 text-muted-foreground border-border">
+                <Icon name="Info" size={12} className="mr-1" />
+                Model {modelVersion}
+              </div>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
             {diagnosis?.description}
           </p>

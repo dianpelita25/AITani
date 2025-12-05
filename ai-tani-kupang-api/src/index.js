@@ -15,8 +15,8 @@ import {
     handleUpdateEvent as handleUpdateFarmTask, 
     handleDeleteEvent as handleDeleteFarmTask 
 } from './routes/farm-tasks';
-import { handleGetDiagnosisHistory, handleCreateDiagnosis } from './routes/diagnosis';
-import { handleGetWeatherAdvice } from './routes/weather';
+import { handleGetDiagnosisHistory, handleCreateDiagnosis, handleOnlineDiagnosis } from './routes/diagnosis';
+import { handleGetWeatherAdvice, handleGetWeather } from './routes/weather';
 import { handleSeedAlerts, seedAlertsFromFixtures } from './routes/dev';
 import { json } from './routes/utils';
 
@@ -73,9 +73,12 @@ app.delete('/farm-tasks/:id', authMiddleware, handleDeleteFarmTask);
 
 app.get('/diagnosis', authMiddleware, handleGetDiagnosisHistory);
 app.post('/diagnosis', authMiddleware, handleCreateDiagnosis);
+// Online diagnosis dibuka tanpa auth untuk demo; tambahkan auth jika diperlukan
+app.post('/diagnosis/online', handleOnlineDiagnosis);
 
 app.get('/photos/:key+', authMiddleware, handlePhotoGet);
 app.get('/weather/advice', authMiddleware, handleGetWeatherAdvice);
+app.get('/weather', handleGetWeather);
 
 // C. Route Khusus Development
 app.post('/dev/seed-alerts', handleSeedAlerts);

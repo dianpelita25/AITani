@@ -10,6 +10,13 @@ const HistoryCard = ({ historyItem, onViewDetails }) => {
     }
   };
 
+  const sourceLabel = (historyItem.result_source || 'unknown').toLowerCase();
+  const sourceBadge = (() => {
+    if (sourceLabel === 'online' || sourceLabel === 'online-mock') return 'AI Online';
+    if (sourceLabel === 'offline-local') return 'AI Lokal';
+    return 'AI';
+  })();
+
   const formatDate = (timestamp) => {
     return new Date(timestamp).toLocaleDateString('id-ID', {
       day: 'numeric', month: 'long', year: 'numeric'
@@ -34,7 +41,17 @@ const HistoryCard = ({ historyItem, onViewDetails }) => {
             <p className={`text-sm font-medium ${getSeverityColor(historyItem.result_severity)}`}>
               {historyItem.result_severity?.toUpperCase()}
             </p>
-            <p className="text-xs text-muted-foreground">{formatDate(historyItem.timestamp)}</p>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] px-2 py-1 rounded-md bg-muted text-muted-foreground font-semibold border border-border">
+                {sourceBadge}{historyItem.provider ? ` (${historyItem.provider})` : ''}
+              </span>
+              {historyItem.model_version && (
+                <span className="text-[10px] px-2 py-1 rounded-md bg-muted text-muted-foreground font-semibold border border-border">
+                  v{historyItem.model_version}
+                </span>
+              )}
+              <p className="text-xs text-muted-foreground">{formatDate(historyItem.timestamp)}</p>
+            </div>
           </div>
           <h3 className="text-base font-semibold text-foreground truncate mt-1">
             {historyItem.result_label}

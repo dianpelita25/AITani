@@ -1,7 +1,7 @@
 --- AWAL DARI SNAPSHOT KODE PROYEK WEB ---
 
 Proyek: ai_tani_kupang Tallwind - Copy
-Dibuat pada: Thu Dec 04 2025 17:31:28 GMT+0800 (Singapore Standard Time)
+Dibuat pada: Thu Nov 20 2025 23:39:42 GMT+0800 (Singapore Standard Time)
 
 ================================================================================
 STRUKTUR FILE & KONTEN
@@ -33,7 +33,6 @@ STRUKTUR FILE & KONTEN
 - **API Cloudflare Worker** - service `ai-tani-kupang-api/src/index.js` memakai Hono, D1 (SQL), R2 (foto), KV (cache), dan cron untuk saran cuaca BMKG.
 - **Otomasi cuaca** - cron Worker mengambil prakiraan, menyimpannya di KV, dan menampilkan rekomendasi di Kalender.
 - **Testing siap liputan** - Vitest + Testing Library mencakup utilitas, komponen krusial, serta Worker route (`docs/testing.md`).
-- **Jalur online (opsional)** - Saat `VITE_ENABLE_ONLINE_AI=true` dan confidence lokal <65%, FE memanggil endpoint `/api/diagnosis/online` (stub Gemini). Jika `GEMINI_API_KEY` tidak diisi, backend mengembalikan mock agar UI tetap jalan.
 
 ## Ekspektasi & target berikutnya
 
@@ -201,7 +200,6 @@ Tambahan: cron Worker (lihat `wrangler.toml`) menjalankan `scheduled()` setiap p
 | Kunci | Fungsi | Default |
 | --- | --- | --- |
 | `VITE_API_BASE_URL` | Origin Worker tanpa suffix `/api`. Dipakai RTK Query & offline replay. | `http://127.0.0.1:8787` |
-| `VITE_ENABLE_ONLINE_AI` | `true` untuk mengaktifkan diagnosis online (Gemini) ketika confidence lokal < 65%. | `false` |
 
 ### Worker (atur melalui `wrangler.toml` atau `wrangler secret put`)
 
@@ -216,7 +214,6 @@ Tambahan: cron Worker (lihat `wrangler.toml`) menjalankan `scheduled()` setiap p
 | `R2_LOCAL_BASE` | Origin Miniflare R2 lokal (`http://127.0.0.1:8787/r2`). |
 | `R2_BUCKET` | Nama bucket default saat membuat URL lokal. |
 | `RESEND_API_KEY` | API key Resend untuk email reset password. |
-| `GEMINI_API_KEY` | API key Gemini untuk diagnosis online. Jangan expose ke Vite; simpan hanya di Worker secret. |
 
 ### Cloudflare binding
 
@@ -241,7 +238,6 @@ Defined pada `wrangler.toml`:
 - **Antrean offline tidak tersinkron** - cek tab Application -> IndexedDB (`aitani-web`). Pastikan pengguna sudah login; sinkronisasi hanya berjalan ketika `selectIsAuthenticated` bernilai true.
 - **R2 403/404** - verifikasi `PUBLIC_R2_BASE_URL`, `R2_BUCKET`, serta binding `R2` di `wrangler.toml`. Untuk lokal, jalankan Worker dengan `--persist-to` agar file tersimpan di `.wrangler/state/v3/r2`.
 - **Email reset tidak terkirim** - pastikan `RESEND_API_KEY` terset dan domain sudah diverifikasi di Resend. Endpoint akan mengembalikan error detail bila gagal.
-- **API key keamanan** - simpan `GEMINI_API_KEY` hanya sebagai secret Worker (bukan `VITE_*`). Endpoint `/api/diagnosis/online` tidak membocorkan key; FE hanya mengirim foto + meta ke backend.
 
 ## Referensi internal
 
@@ -370,8 +366,7 @@ Selamat membangun! Jika ada perubahan besar (misalnya model baru atau migrasi sc
     "typecheck": "node -e \"console.log('Typecheck (JSDoc) OK')\"",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
-    "test:ui": "vitest --ui",
-    "test:e2e": "playwright test"
+    "test:ui": "vitest --ui"
   },
   "eslintConfig": {
     "extends": [
@@ -392,7 +387,6 @@ Selamat membangun! Jika ada perubahan besar (misalnya model baru atau migrasi sc
     ]
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.10",
@@ -1015,14 +1009,10 @@ export function mapModelResultToView(result) {
 --- File: ./src/ai/localDiagnosis.js ---
 
 // src/ai/localDiagnosis.js
-// Memuat TensorFlow.js secara dinamis, lalu menjalankan diagnosis lokal
-// menggunakan pipeline modular (config + runner + engine) dengan fallback mock.
+// Memuat TensorFlow.js secara dinamis dan menjalankan diagnosis lokal berbasis model TF.js.
 import modelUrl from '/model/model.json?url';
-import { LOCAL_MODEL_CONFIG } from './localModelConfig';
-import { predictFromTensor } from './localDiagnosisEngine';
-import { setTfInstance } from './localModelRunner';
 
-// gunakan bundel lokal (public/libs/tf.min.js) agar offline-ready
+// sekarang pakai file lokal di /public/libs/tf.min.js
 const TFJS_CDN_URL = '/libs/tf.min.js';
 
 let tfInstance = null;
@@ -1068,10 +1058,11 @@ function ensureAugmentationStubs(tf) {
 
 async function injectTfScript() {
   if (tfInstance) return tfInstance;
+
   if (typeof window === 'undefined') {
     throw new Error('TF.js hanya bisa dimuat di lingkungan browser.');
   }
-  // reuse jika sudah ada
+// ✅ Kalau TF sudah ada (misal dari load sebelumnya), pakai itu saja
   if (window.tf && typeof window.tf.setBackend === 'function') {
     tfInstance = window.tf;
     await tfInstance.setBackend('webgl');
@@ -1080,6 +1071,7 @@ async function injectTfScript() {
     console.log('TF.js reuse instance, backend:', tfInstance.getBackend());
     return tfInstance;
   }
+
   if (tfLoadPromise) return tfLoadPromise;
 
   tfLoadPromise = new Promise((resolve, reject) => {
@@ -1105,7 +1097,7 @@ async function injectTfScript() {
       return;
     }
 
-    console.log('Menginjeksikan skrip TensorFlow.js (local bundle)...');
+    console.log('Menginjeksikan skrip TensorFlow.js dari CDN @4.22.0...');
     const script = document.createElement('script');
     script.id = 'tfjs-script';
     script.src = TFJS_CDN_URL;
@@ -1120,13 +1112,13 @@ async function injectTfScript() {
         await tfInstance.setBackend('webgl');
         await tfInstance.ready();
         ensureAugmentationStubs(tfInstance);
-        console.log('TF.js backend siap:', tfInstance.getBackend(), 'versi:', tfInstance.version?.tfjs);
+        console.log('TF.js backend siap: webgl versi:', tfInstance.version?.tfjs);
         resolve(tfInstance);
       } catch (err) {
         reject(err);
       }
     };
-    script.onerror = () => reject(new Error('Gagal memuat skrip TF.js dari bundle.'));
+    script.onerror = () => reject(new Error('Gagal memuat skrip TF.js dari CDN.'));
     document.head.appendChild(script);
   });
 
@@ -1144,9 +1136,11 @@ async function tryLoadTf() {
 
 async function tryLoadModel(tf) {
   if (modelInstance) return modelInstance;
+
   ensureAugmentationStubs(tf);
 
-  const TIMEOUT_MS = 8000;
+  const TIMEOUT_MS = 8000; // 8 detik
+
   const loadPromise = (async () => {
     console.log(`Mencoba memuat model (layers) dari: ${modelUrl}`);
     const model = await tf.loadLayersModel(modelUrl, {
@@ -1166,10 +1160,14 @@ async function tryLoadModel(tf) {
     ]);
     return model;
   } catch (err) {
-    console.warn('Model not found / failed / TIMEOUT, using mock fallback:', err?.message || err);
+    console.warn(
+      'Model not found / failed / TIMEOUT, using mock fallback:',
+      err?.message || err
+    );
     return null;
   }
 }
+
 
 async function fileToInputTensor(tf, file, size = 224) {
   const bitmap = await createImageBitmap(file);
@@ -1177,8 +1175,7 @@ async function fileToInputTensor(tf, file, size = 224) {
     const tensor = tf.browser.fromPixels(bitmap).toFloat();
     const normalized = tensor.div(255);
     const resized = tf.image.resizeBilinear(normalized, [size, size]);
-    // kembalikan 3D tensor; runner akan menambah batch jika perlu
-    return resized;
+    return resized.expandDims(0);
   });
 }
 
@@ -1202,66 +1199,83 @@ function mockPredict() {
     ]
   };
 }
-
 export async function runLocalDiagnosis(imageFile) {
-  console.log('[localDiagnosis] masuk runLocalDiagnosis, file =', imageFile);
+    console.log('[localDiagnosis] masuk runLocalDiagnosis, file =', imageFile);
 
   try {
     const tf = await tryLoadTf();
     if (!tf) return mockPredict();
 
-    // Gunakan TF instance yang sama di runner modular
-    setTfInstance(tf);
-
-    // Pastikan model tersimpan untuk reuse (tetap no-store agar tidak cache lama)
     const model = await tryLoadModel(tf);
     if (!model) return mockPredict();
 
     console.log('Memproses gambar untuk input model...');
-    const input = await fileToInputTensor(tf, imageFile, LOCAL_MODEL_CONFIG.inputSize);
+    const input = await fileToInputTensor(tf, imageFile, 128);
 
-    console.log('Menjalankan prediksi (local TF.js model) via pipeline baru...');
-    const diagnosisPack = await predictFromTensor(input);
+    console.log('Menjalankan prediksi (local TF.js model)...');
+    const output = model.predict(input);
+    const data = await output.data();
 
-    // Cleanup tensor
+    const maxIndex = data.indexOf(Math.max(...data));
+    const confidence = Math.round(data[maxIndex] * 100);
+
+    // ⚠️ Sesuaikan dengan output model yang sekarang 3 kelas
+    const classLabels = ['Blight', 'Common_Rust', 'Gray_Leaf_Spot'];
+    const label = classLabels[maxIndex] || 'Unknown';
+
+    // ➜ LOG DEBUG OUTPUT MENTAH & PILIHAN INDEX
+    console.log('[localDiagnosis] raw output =', Array.from(data));
+    console.log(
+      '[localDiagnosis] picked index =',
+      maxIndex,
+      'label =',
+      label,
+      'confidence =',
+      confidence
+    );
+
     input.dispose();
+    output.dispose();
 
-    const primary = diagnosisPack?.primaryDiagnosis || {};
-    const confidence = primary.confidence ?? 0;
     const severityMap = {
-      blight: 'berat',
-      common_rust: 'sedang',
-      gray_leaf_spot: 'sedang',
+      Blight: 'berat',
+      Common_Rust: 'sedang',
+      Gray_Leaf_Spot: 'sedang'
+    };
+    const descriptionMap = {
+      Blight: 'Terdeteksi Hawar Daun (Blight). Monitor penyebaran dan lakukan tindakan cepat.',
+      Common_Rust: 'Terdeteksi Karat Biasa. Perhatikan bercak coklat/oranye pada daun.',
+      Gray_Leaf_Spot: 'Terdeteksi Bercak Abu-abu. Biasanya moderat tapi perlu diawasi.'
     };
 
     const result = {
       diagnosis: {
-        label: primary.name || primary.code || 'Unknown',
+        label,
         confidence,
-        severity: severityMap[primary.code] || 'sedang',
-        description: primary.summary || 'Analisis AI selesai.',
+        severity: severityMap[label] || 'tidak diketahui',
+        description: descriptionMap[label] || 'Analisis AI selesai.'
       },
       recommendations: [
         {
-          id: 'rec_tf_primary',
-          title: `Langkah untuk ${primary.name || primary.code || 'tanaman'}`,
-          description: primary.farmerMessage || 'Ikuti panduan budidaya dan konsultasi jika gejala memburuk.',
-          priority: confidence < 65 ? 'tinggi' : 'sedang',
-          timeframe: confidence < 65 ? 'Segera' : '2-3 hari',
+          id: 'rec_tf_1',
+          title: `Langkah untuk ${label}`,
+          description: 'Ikuti panduan budidaya yang sesuai dan konsultasi jika gejala memburuk.',
+          priority: 'sedang',
+          timeframe: '2-3 hari'
         },
         {
-          id: 'rec_tf_online',
-          title: 'Uji ulang saat online',
-          description: confidence < 65
-            ? 'Akurasi di bawah 65%. Sarankan diagnosis ulang saat tersambung internet untuk hasil >90%.'
-            : 'Jika ingin konfirmasi, jalankan diagnosis online untuk hasil lebih presisi.',
-          priority: confidence < 65 ? 'tinggi' : 'rendah',
-          timeframe: confidence < 65 ? 'Segera' : 'Opsional',
-        },
-      ],
+          id: 'rec_tf_2',
+          title: 'Pencegahan umum',
+          description: 'Pertahankan sanitasi lahan, sirkulasi udara, dan nutrisi yang seimbang.',
+          priority: 'rendah',
+          timeframe: 'Berkelanjutan'
+        }
+      ]
     };
 
+    // ➜ LOG HASIL FINAL YANG DIKIRIM KE UI
     console.log('[localDiagnosis] result yang dikembalikan =', result);
+
     return result;
   } catch (err) {
     console.error('Terjadi error saat diagnosis lokal, menggunakan mock:', err);
@@ -1277,7 +1291,7 @@ export async function warmupLocalTf() {
       console.warn('[localDiagnosis] warmup: TF.js tidak tersedia (akan pakai mock kalau diagnosis).');
       return;
     }
-    setTfInstance(tf);
+    // Tidak usah load model di sini dulu biar startup tetap ringan.
     console.log('[localDiagnosis] warmup: TF.js berhasil dimuat & siap dipakai.');
   } catch (err) {
     console.warn('[localDiagnosis] warmup: gagal memuat TF.js lebih awal:', err);
@@ -1367,27 +1381,27 @@ export async function predictFromTensor(imageTensor) {
 
 // Mapping index output model -> penyakit + teks UI
 
-// Urutan DISEASE_LABELS HARUS sama dengan urutan output model (Dense units = 3)
-// Berdasarkan pipeline lama: ['Blight', 'Common_Rust', 'Gray_Leaf_Spot']
+// Urutan DISEASE_LABELS HARUS sama dengan urutan output model
 export const DISEASE_LABELS = [
-  { id: 0, code: 'blight',        name: 'Blight',        templateKey: 'blight_desc' },
-  { id: 1, code: 'common_rust',   name: 'Common Rust',   templateKey: 'common_rust_desc' },
-  { id: 2, code: 'gray_leaf_spot',name: 'Gray Leaf Spot',templateKey: 'gray_leaf_spot_desc' },
+  { id: 0, code: 'healthy',         name: 'Tanaman Sehat',       templateKey: 'healthy_desc' },
+  { id: 1, code: 'gray_leaf_spot',  name: 'Gray Leaf Spot',      templateKey: 'gray_leaf_spot_desc' },
+  { id: 2, code: 'blight',          name: 'Blight',              templateKey: 'blight_desc' },
+  // tambahkan sesuai kelas di model...
 ];
 
 // Template teks yang nanti bisa gampang kamu edit tanpa sentuh logika AI
 export const UI_TEMPLATES = {
-  blight_desc: {
-    summary: 'Terdeteksi Hawar Daun (Blight). Monitor penyebaran dan lakukan tindakan cepat.',
-    farmerMessage: 'Segera singkirkan daun terinfeksi berat, gunakan fungisida sesuai anjuran, dan jaga aerasi lahan.',
-  },
-  common_rust_desc: {
-    summary: 'Terdeteksi Karat Biasa (Common Rust).',
-    farmerMessage: 'Periksa bercak coklat/oranye di beberapa titik lahan; lakukan penyemprotan preventif bila cuaca lembap berlanjut.',
+  healthy_desc: {
+    summary: 'Tanaman tampak sehat.',
+    farmerMessage: 'Pertahankan pola perawatan seperti sekarang, tetap pantau kondisi daun secara berkala.',
   },
   gray_leaf_spot_desc: {
-    summary: 'Terdeteksi Bercak Abu-abu (Gray Leaf Spot).',
-    farmerMessage: 'Awasi perkembangan bercak; pertimbangkan fungisida jika luas sebaran meningkat dalam 2–3 hari.',
+    summary: 'Terindikasi serangan Gray Leaf Spot.',
+    farmerMessage: 'Segera periksa sebaran bercak di beberapa titik lahan. Jika menyebar cepat, lakukan penyemprotan fungisida sesuai anjuran.',
+  },
+  blight_desc: {
+    summary: 'Terindikasi penyakit hawar (blight).',
+    farmerMessage: 'Prioritaskan pembersihan daun yang parah dan konsultasikan dosis fungisida yang aman.',
   },
 };
 
@@ -1399,7 +1413,7 @@ export const UI_TEMPLATES = {
 
 export const LOCAL_MODEL_CONFIG = {
   modelUrl: '/model/model.json',   // path model TF.js
-  inputSize: 128,                  // sisi gambar (128x128 sesuai pipeline lama)
+  inputSize: 224,                  // sisi gambar (224x224)
   topK: 3,                         // ambil 3 prediksi teratas
   scoreThreshold: 0.20,            // minimal 20% baru dianggap
 };
@@ -1411,23 +1425,12 @@ export const LOCAL_MODEL_CONFIG = {
 // Fokus: urus TF.js (load model + jalankan prediksi)
 // Tidak tahu apa-apa soal nama penyakit, teks, dsb.
 
-import * as tfBase from '@tensorflow/tfjs';
+import * as tf from '@tensorflow/tfjs';
 import { LOCAL_MODEL_CONFIG } from './localModelConfig';
 
 let modelPromise = null;
-let tfInstance = null;
-
-export function setTfInstance(tf) {
-  tfInstance = tf;
-  modelPromise = null; // reset supaya load ulang dengan instance baru
-}
-
-function getTf() {
-  return tfInstance || tfBase;
-}
 
 export function loadLocalModel() {
-  const tf = getTf();
   if (!modelPromise) {
     modelPromise = tf.loadLayersModel(LOCAL_MODEL_CONFIG.modelUrl);
   }
@@ -1439,7 +1442,6 @@ export function loadLocalModel() {
  * return: array [{ index, score }]
  */
 export async function runLocalModel(inputTensor) {
-  const tf = getTf();
   const model = await loadLocalModel();
 
   const batched = inputTensor.rank === 3
@@ -1461,60 +1463,6 @@ export async function runLocalModel(inputTensor) {
 
 
 --- File: ./src/ai/modelWeights.js (SKIPPED: > 409600 bytes) ---
-
-
---- File: ./src/ai/onlineDiagnosis.js ---
-
-// src/ai/onlineDiagnosis.js
-// Memanggil diagnosis online (rencana: Gemini API) via backend endpoint.
-
-const RAW_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8787';
-const BASE_URL = `${RAW_BASE.replace(/\/+$/, '')}/api/diagnosis/online`;
-
-async function fileToDataURL(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-export async function runOnlineDiagnosis({ imageFile, imageDataUrl, meta = {} }) {
-  const token = localStorage.getItem('sessionToken') || '';
-  const payload = {
-    image: imageDataUrl || (imageFile ? await fileToDataURL(imageFile) : ''),
-    meta,
-  };
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 25000);
-
-  try {
-    console.log('[onlineDiagnosis] mengirim ke backend online...', { meta, hasToken: !!token, baseUrl: BASE_URL });
-    const resp = await fetch(BASE_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-
-    if (!resp.ok) {
-      const detail = await resp.text();
-      throw new Error(`Online diagnosis gagal: ${resp.status} ${detail}`);
-    }
-
-    const data = await resp.json();
-    console.log('[onlineDiagnosis] respons backend online', data);
-    return data;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
 
 
 --- File: ./src/components/AppIcon.jsx ---
@@ -5131,7 +5079,7 @@ export default CropImageDisplay;
 import React from 'react';
 import Icon from '../../../components/AppIcon';
 
-const DiagnosisCard = ({ diagnosis, source, provider }) => {
+const DiagnosisCard = ({ diagnosis }) => {
   const getSeverityColor = (severity) => {
     switch (severity?.toLowerCase()) {
       case 'ringan':
@@ -5158,10 +5106,6 @@ const DiagnosisCard = ({ diagnosis, source, provider }) => {
           <h3 className="text-lg font-semibold text-foreground mb-2">
             {diagnosis?.label}
           </h3>
-          <div className="inline-flex items-center px-2 py-1 rounded-md border text-[10px] font-semibold bg-muted/60 text-muted-foreground border-border">
-            <Icon name={source === 'online' ? 'Cloud' : 'Cpu'} size={12} className="mr-1" />
-            {source === 'online' ? 'AI Online' : 'AI Lokal'}{provider ? ` (${provider})` : ''}
-          </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
             {diagnosis?.description}
           </p>
@@ -5217,7 +5161,6 @@ const DiagnosisCard = ({ diagnosis, source, provider }) => {
 export default DiagnosisCard;
 
 
-
 --- File: ./src/pages/diagnosis-results/components/DiagnosisHeader.jsx ---
 
 import React from 'react';
@@ -5266,6 +5209,151 @@ const DiagnosisHeader = ({ onShare }) => {
 };
 
 export default DiagnosisHeader;
+
+
+--- File: ./src/pages/diagnosis-results/components/EnvironmentalFactors.jsx ---
+
+import React from 'react';
+import Icon from '../../../components/AppIcon';
+
+const EnvironmentalFactors = ({ factors }) => {
+  const getFactorIcon = (type) => {
+    switch (type) {
+      case 'temperature': return 'Thermometer';
+      case 'humidity': return 'Droplets';
+      case 'rainfall': return 'CloudRain';
+      case 'soil_moisture': return 'Sprout';
+      case 'sunlight': return 'Sun';
+      default: return 'Info';
+    }
+  };
+
+  const getFactorLabel = (type) => {
+    switch (type) {
+      case 'temperature': return 'Suhu';
+      case 'humidity': return 'Kelembaban';
+      case 'rainfall': return 'Curah Hujan';
+      case 'soil_moisture': return 'Kelembaban Tanah';
+      case 'sunlight': return 'Sinar Matahari';
+      default: return type;
+    }
+  };
+
+  const getFactorColor = (impact) => {
+    switch (impact?.toLowerCase()) {
+      case 'positive': return 'text-success bg-success/10';
+      case 'negative': return 'text-error bg-error/10';
+      case 'neutral': return 'text-muted-foreground bg-muted/10';
+      default: return 'text-muted-foreground bg-muted/10';
+    }
+  };
+
+  return (
+    <div className="bg-card rounded-lg border border-border p-6 shadow-agricultural">
+      <div className="flex items-center mb-4">
+        <Icon name="CloudSun" size={20} className="text-primary mr-2" />
+        <h3 className="text-lg font-semibold text-foreground">
+          Faktor Lingkungan
+        </h3>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {factors?.map((factor, index) => (
+          <div 
+            key={index}
+            className={`
+              p-4 rounded-lg border transition-smooth
+              ${getFactorColor(factor?.impact)}
+            `}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-2">
+                <Icon name={getFactorIcon(factor?.type)} size={18} />
+                <span className="font-medium text-sm">
+                  {getFactorLabel(factor?.type)}
+                </span>
+              </div>
+              <span className="text-lg font-semibold">
+                {factor?.value}
+              </span>
+            </div>
+            
+            <p className="text-xs opacity-80 leading-relaxed">
+              {factor?.description}
+            </p>
+            
+            {factor?.recommendation && (
+              <div className="mt-2 pt-2 border-t border-current/20">
+                <p className="text-xs font-medium">
+                  💡 {factor?.recommendation}
+                </p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+        <div className="flex items-start space-x-2">
+          <Icon name="Info" size={16} className="text-primary mt-0.5" />
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Data lingkungan membantu AI memahami kondisi yang mempengaruhi kesehatan tanaman Anda.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default EnvironmentalFactors;
+
+
+--- File: ./src/pages/diagnosis-results/components/OfflineIndicator.jsx ---
+
+import React from 'react';
+import Icon from '../../../components/AppIcon';
+
+const OfflineIndicator = ({ isOnline, hasPendingSync, lastSyncTime }) => {
+  if (isOnline && !hasPendingSync) return null;
+
+  return (
+    <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 mb-6">
+      <div className="flex items-start space-x-3">
+        <Icon 
+          name={isOnline ? "CloudOff" : "WifiOff"} 
+          size={20} 
+          className="text-warning mt-0.5" 
+        />
+        <div className="flex-1">
+          <h4 className="text-sm font-medium text-warning mb-1">
+            {isOnline ? 'Menunggu Sinkronisasi' : 'Mode Offline'}
+          </h4>
+          <p className="text-xs text-warning/80 leading-relaxed">
+            {isOnline 
+              ? 'Hasil diagnosis telah disimpan secara lokal dan akan disinkronkan saat koneksi stabil.' :'Hasil diagnosis disimpan secara lokal. Data akan disinkronkan saat terhubung ke internet.'
+            }
+          </p>
+          
+          {lastSyncTime && (
+            <p className="text-xs text-warning/60 mt-2">
+              Sinkronisasi terakhir: {new Date(lastSyncTime)?.toLocaleString('id-ID')}
+            </p>
+          )}
+        </div>
+        
+        <div className="flex items-center space-x-1">
+          <div className={`
+            w-2 h-2 rounded-full
+            ${isOnline ? 'bg-success animate-pulse' : 'bg-warning'}
+          `}></div>
+          <span className="text-xs text-warning">
+            {isOnline ? 'Online' : 'Offline'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default OfflineIndicator;
 
 
 --- File: ./src/pages/diagnosis-results/components/RecommendationCard.jsx ---
@@ -5411,8 +5499,10 @@ import { useCreateFarmTaskMutation } from '../../services/farmTasksApi';
 import DiagnosisHeader from './components/DiagnosisHeader';
 import CropImageDisplay from './components/CropImageDisplay';
 import DiagnosisCard from './components/DiagnosisCard';
+import EnvironmentalFactors from './components/EnvironmentalFactors';
 import RecommendationCard from './components/RecommendationCard';
 import ActionButtons from './components/ActionButtons';
+import OfflineIndicator from './components/OfflineIndicator';
 import ShareActionSheet from '../../components/ui/ShareActionSheet';
 import LoadingOverlay from '../../components/ui/LoadingOverlay';
 import BottomNavigation from '../../components/ui/BottomNavigation';
@@ -5436,7 +5526,6 @@ const DiagnosisResults = () => {
   };
 
   const diagnosisData = location?.state?.diagnosisData || mockDiagnosisData;
-  const debugInfo = diagnosisData?.debug;
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -5506,6 +5595,8 @@ const DiagnosisResults = () => {
       {/* BODY dalam container */}
       <div className="mx-auto w-full max-w-screen-xl px-4 md:px-6 lg:px-8 pb-20">
         <div className="pt-4 space-y-6">
+          <OfflineIndicator isOnline={isOnline} />
+
           <CropImageDisplay
             imageUrl={diagnosisData.image?.url}
             cropType={diagnosisData.image?.cropType}
@@ -5513,22 +5604,9 @@ const DiagnosisResults = () => {
             location={diagnosisData.image?.location}
           />
 
-          <DiagnosisCard
-            diagnosis={diagnosisData.diagnosis}
-            source={diagnosisData.source}
-            provider={diagnosisData.provider}
-          />
+          <DiagnosisCard diagnosis={diagnosisData.diagnosis} />
 
-          {debugInfo && (
-            <div className="border border-dashed border-muted rounded-md p-3 text-xs text-muted-foreground space-y-1 bg-muted/30">
-              <div className="font-semibold text-foreground">Debug Online</div>
-              <div>onlineAttempted: {String(debugInfo.onlineAttempted)}</div>
-              <div>onlineUsed: {String(debugInfo.onlineUsed)}</div>
-              <div>onlineError: {debugInfo.onlineError || '-'}</div>
-              <div>onlineEnabled: {String(debugInfo.onlineEnabled)}</div>
-              <div>wasOnline: {String(debugInfo.wasOnline)}</div>
-            </div>
-          )}
+          <EnvironmentalFactors factors={diagnosisData.environmentalFactors} />
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -8984,7 +9062,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCreateDiagnosisMutation } from '../../services/diagnosisApi';
 import { runLocalDiagnosis } from '../../ai/localDiagnosis';
-import { runOnlineDiagnosis } from '../../ai/onlineDiagnosis';
 import { enqueueRequest } from '../../offline/queueService';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
@@ -9006,7 +9083,6 @@ const fileToDataURL = (file) =>
 
 const PhotoDiagnosis = () => {
   const navigate = useNavigate();
-  const ENABLE_ONLINE_AI = (import.meta.env.VITE_ENABLE_ONLINE_AI ?? 'true') === 'true';
   const [currentStep, setCurrentStep] = useState('capture');
   const [capturedImage, setCapturedImage] = useState(null);
   const [formData, setFormData] = useState(null);
@@ -9064,70 +9140,27 @@ const PhotoDiagnosis = () => {
       return null;
     });
 
-    // PRIORITAS ONLINE: jika diizinkan dan online, coba diagnosis online lebih dulu (menggunakan foto yang sama).
-    let finalResult = null;
-    let onlineAttempted = false;
-    let onlineUsed = false;
-    let onlineError = null;
-
-    if (ENABLE_ONLINE_AI && navigator.onLine && capturedImage) {
-      try {
-        onlineAttempted = true;
-        const imageDataUrl = await fileToDataURL(capturedImage);
-        const onlineResult = await runOnlineDiagnosis({
-          imageFile: capturedImage,
-          imageDataUrl,
-          meta: data,
-        });
-        if (onlineResult) {
-          console.log('[onlineDiagnosis] memakai hasil ONLINE', onlineResult);
-          finalResult = { ...onlineResult, source: 'online', provider: onlineResult.provider || 'gemini' };
-          onlineUsed = true;
-        }
-      } catch (err) {
-        onlineError = err?.message || String(err);
-        console.warn('[onlineDiagnosis] gagal, fallback ke lokal/server:', onlineError);
-      }
-    } else {
-      console.log('[onlineDiagnosis] dilewati. enable=', ENABLE_ONLINE_AI, 'online=', navigator.onLine, 'hasImage=', !!capturedImage);
-    }
-
     const [localResult, serverResult] = await Promise.all([localDiagnosisPromise, serverDiagnosisPromise]);
 
-    // Jika online tidak memberikan hasil, pakai lokal/server
-    if (!finalResult) {
-      finalResult = localResult ?? serverResult ?? null;
-    }
+    const finalResult = localResult ?? serverResult ?? null;
 
-    // --- PERBAIKAN: kirim juga data foto + metadata form ke halaman hasil ---
+    
+    // --- PERBAIKAN SATU-SATUNYA ADA DI BLOK INI ---
     if (finalResult) {
-      const imageDataUrl = capturedImage ? await fileToDataURL(capturedImage) : '';
-      const diagnosisDataForNextPage = {
-        ...finalResult,
-        timestamp: finalResult?.timestamp || new Date().toISOString(),
-        source: finalResult?.source || (finalResult?.provider ? 'online' : 'local'),
-        provider: finalResult?.provider || null,
-        debug: {
-          onlineAttempted,
-          onlineUsed,
-          onlineError,
-          onlineEnabled: ENABLE_ONLINE_AI,
-          wasOnline: navigator.onLine,
-        },
-        image: {
-          url: imageDataUrl,
-          cropType: data?.crop_type || 'Unknown',
-          location: {
-            latitude: data?.latitude,
-            longitude: data?.longitude,
-            address: data?.field_id || 'Lahan',
-          },
-        },
-      };
+      // Alih-alih hanya mengubah state, kita NAVIGASI ke halaman hasil
+          // pastikan hasil diagnosis punya timestamp.
+    const diagnosisDataForNextPage = {
+      ...finalResult,
+      // kalau server sudah kasih timestamp, pakai itu.
+      // kalau tidak ada (misalnya full lokal TF.js), pakai waktu sekarang.
+      timestamp: finalResult?.timestamp || new Date().toISOString(),
+    };
 
-      navigate('/diagnosis-results', {
-        state: { diagnosisData: diagnosisDataForNextPage },
-      });
+    // sambil "menitipkan" data asli ke halaman hasil.
+    navigate('/diagnosis-results', {
+      state: { diagnosisData: diagnosisDataForNextPage },
+    });
+
     } else {
       // Jika keduanya (lokal dan server) gagal, beri tahu pengguna.
       alert("Gagal melakukan diagnosis. Silakan periksa koneksi Anda dan coba lagi.");
@@ -9287,7 +9320,6 @@ const PhotoDiagnosis = () => {
 };
 
 export default PhotoDiagnosis;
-
 
 
 --- File: ./src/pages/register/index.jsx ---
