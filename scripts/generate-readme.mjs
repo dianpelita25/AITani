@@ -1,4 +1,14 @@
-# AI Tani Kupang
+#!/usr/bin/env node
+
+/**
+ * Generator README untuk AI Tani Kupang
+ * Jalankan: node scripts/generate-readme.mjs
+ */
+
+import { writeFileSync } from 'fs';
+import { resolve } from 'path';
+
+const content = `# AI Tani Kupang
 
 Platform pendamping petani: diagnosis foto hybrid (online + lokal), rencana tindakan lapang, antrean offline, serta asisten belanja obat & alat. Frontend React/Vite, backend Cloudflare Worker (D1/R2/KV), dengan alur yang aman untuk offline/online.
 
@@ -6,63 +16,63 @@ Platform pendamping petani: diagnosis foto hybrid (online + lokal), rencana tind
 - Diagnosis hybrid: online-first (Gemini/custom endpoint) dengan fallback TF.js lokal + antrean offline.
 - Precheck foto: server menilai kualitas/objek tanaman sebelum diagnosa; UI menampilkan kartu "Kualitas foto" beserta saran.
 - Planner lapang: backend menghasilkan rencana tindakan bertahap (immediate/this_week/next_weeks/monitoring); UI menampilkan fase & tombol "Jadikan tugas".
-- Asisten Toko: endpoint `/api/shop-assistant` + tombol "Hitung belanja obat & alat" (badge AI, offline-safe, toast non-blocking).
+- Asisten Toko: endpoint \`/api/shop-assistant\` + tombol "Hitung belanja obat & alat" (badge AI, offline-safe, toast non-blocking).
 - Weather snapshot: Open-Meteo (fallback mock) otomatis dikirim ke AI & ditampilkan sebagai badge.
 - Offline-first: antrean IndexedDB untuk diagnosis/farm tasks tetap berjalan, replay saat online.
 
 ## Arsitektur singkat
 - **Frontend**: React 18 + Vite + Tailwind + Redux Toolkit + RTK Query. DiagnosisResults menampilkan precheck, planner, shop assistant, rekomendasi, dan toast.
-- **AI lokal**: `src/ai/localDiagnosis.js` (TF.js 4.22) + modul modular (config/runner/catalog) siap integrasi penuh.
-- **AI online**: `ai-tani-kupang-api/src/routes/diagnosis.js` menjalankan runImagePrecheck + runOnlineDiagnosis (custom/Gemini/mock) + normalizeConfidence + planner + shop assistant.
+- **AI lokal**: \`src/ai/localDiagnosis.js\` (TF.js 4.22) + modul modular (config/runner/catalog) siap integrasi penuh.
+- **AI online**: \`ai-tani-kupang-api/src/routes/diagnosis.js\` menjalankan runImagePrecheck + runOnlineDiagnosis (custom/Gemini/mock) + normalizeConfidence + planner + shop assistant.
 - **Offline layer**: IndexedDB + queue service; replay ketika online & auth tersedia.
 - **Backend**: Cloudflare Worker (Hono) dengan D1 (diagnosis/farm tasks), R2 (foto), KV (cuaca/cache). Weather via Open-Meteo fallback mock.
 
 ## Endpoint penting (Worker)
-- `POST /api/diagnosis` — simpan diagnosis (online-first + precheck + planner).
-- `POST /api/diagnosis/online` — proxy AI (tidak menyimpan).
-- `GET /api/diagnosis` — riwayat diagnosis.
-- `POST /api/shop-assistant` — asisten belanja obat & alat.
-- `GET /api/weather` — snapshot cuaca (Open-Meteo/mock).
-- Endpoint auth/alerts/farm-tasks/photos/dev seed tetap tersedia (lihat `ai-tani-kupang-api/src/index.js`).
+- \`POST /api/diagnosis\` — simpan diagnosis (online-first + precheck + planner).
+- \`POST /api/diagnosis/online\` — proxy AI (tidak menyimpan).
+- \`GET /api/diagnosis\` — riwayat diagnosis.
+- \`POST /api/shop-assistant\` — asisten belanja obat & alat.
+- \`GET /api/weather\` — snapshot cuaca (Open-Meteo/mock).
+- Endpoint auth/alerts/farm-tasks/photos/dev seed tetap tersedia (lihat \`ai-tani-kupang-api/src/index.js\`).
 
 ## Setup cepat
 1) **Env frontend**
-   ```bash
+   \`\`\`bash
    cp .env.txt .env
    # set VITE_API_BASE_URL=http://127.0.0.1:8787
-   ```
+   \`\`\`
 2) **Install**
-   ```bash
+   \`\`\`bash
    pnpm install
    cd ai-tani-kupang-api && pnpm install
-   ```
+   \`\`\`
 3) **Migrasi D1 lokal**
-   ```bash
+   \`\`\`bash
    cd ai-tani-kupang-api
    npx wrangler d1 migrations apply ai-tani-kupang-web --local
-   ```
+   \`\`\`
 4) **Jalankan Worker**
-   ```bash
+   \`\`\`bash
    cd ai-tani-kupang-api
    npx wrangler dev --local --persist-to ./tmp   # http://127.0.0.1:8787
-   ```
+   \`\`\`
 5) **Jalankan frontend**
-   ```bash
+   \`\`\`bash
    pnpm dev   # http://localhost:4028 (proxy /api -> 127.0.0.1:8787)
-   ```
-6) **Optional seed** — lihat `ai-tani-kupang-api/src/routes/dev.js` dan `docs/demo-assets/`.
+   \`\`\`
+6) **Optional seed** — lihat \`ai-tani-kupang-api/src/routes/dev.js\` dan \`docs/demo-assets/\`.
 
 ## Testing
-- Vitest/RTL + Worker: `pnpm test`
-- Playwright e2e: `pnpm test:e2e`
+- Vitest/RTL + Worker: \`pnpm test\`
+- Playwright e2e: \`pnpm test:e2e\`
 
 ## Konfigurasi kunci
-- **Frontend (.env)**: `VITE_API_BASE_URL` (default http://127.0.0.1:8787). Jangan simpan API key AI di Vite.
-- **Worker secrets**: `GEMINI_API_KEY`, `JWT_SECRET`, `RESEND_API_KEY`, binding D1/R2/KV (lihat `wrangler.toml`).
+- **Frontend (.env)**: \`VITE_API_BASE_URL\` (default http://127.0.0.1:8787). Jangan simpan API key AI di Vite.
+- **Worker secrets**: \`GEMINI_API_KEY\`, \`JWT_SECRET\`, \`RESEND_API_KEY\`, binding D1/R2/KV (lihat \`wrangler.toml\`).
 - Weather: gunakan Open-Meteo fallback; BMKG reserved for future.
 
 ## Struktur proyek (ringkas)
-```
+\`\`\`
 .
 |- src/                       # React app (pages, components, services, ai, offline)
 |- public/model/              # Model TF.js lokal
@@ -70,7 +80,7 @@ Platform pendamping petani: diagnosis foto hybrid (online + lokal), rencana tind
 |- docs/                      # runbook, testing, demo assets
 |- ai-tani-kupang-api/        # Cloudflare Worker (routes, migrations, wrangler.toml)
 |- tests/                     # Playwright e2e
-```
+\`\`\`
 
 ## Fitur utama (detail)
 - Precheck foto: kualitas & objek tanaman, tampil di UI.
@@ -81,6 +91,11 @@ Platform pendamping petani: diagnosis foto hybrid (online + lokal), rencana tind
 - Riwayat: sumber AI Online / AI Lokal, provider, model version terlihat di HistoryCard.
 
 ## Tips & keamanan
-- Jalankan Vite dengan proxy bawaan (lihat `vite.config.mjs`) agar FE memanggil Worker lokal tanpa CORS.
+- Jalankan Vite dengan proxy bawaan (lihat \`vite.config.mjs\`) agar FE memanggil Worker lokal tanpa CORS.
 - Simpan semua kunci AI di Worker secret; FE hanya kirim foto/meta.
 - Jika diagnosis online/Gemini tidak tersedia, backend otomatis fallback (mock/offline) tanpa memblok UI.
+`;
+
+const target = resolve('README.md');
+writeFileSync(target, content, { encoding: 'utf-8' });
+console.log(`README generated at ${target}`);
