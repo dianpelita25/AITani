@@ -1,4 +1,4 @@
-﻿// src/pages/diagnosis-results/index.jsx
+// src/pages/diagnosis-results/index.jsx
 
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -237,7 +237,7 @@ const DiagnosisResults = () => {
     setIsSaving(true);
     try {
       await Promise.all(plansToSave.map((p) => createEvent(p).unwrap()));
-      toast.success('Rencana berhasil disimpan.', { icon: '🌱' });
+      toast.success('Rencana berhasil disimpan.', { icon: '??' });
       navigate('/farming-calendar');
     } catch (err) {
       console.error('Gagal online, simpan ke antrean:', err);
@@ -756,9 +756,4 @@ const DiagnosisResults = () => {
 };
 
 export default DiagnosisResults;
-
-
-
-
-
 

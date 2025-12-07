@@ -15,8 +15,9 @@ import {
     handleUpdateEvent as handleUpdateFarmTask, 
     handleDeleteEvent as handleDeleteFarmTask 
 } from './routes/farm-tasks';
-import { handleGetDiagnosisHistory, handleCreateDiagnosis, handleOnlineDiagnosis } from './routes/diagnosis';
+import { handleGetDiagnosisHistory, handleCreateDiagnosis, handleOnlineDiagnosis, handleShopAssistant } from './routes/diagnosis';
 import { handleGetWeatherAdvice, handleGetWeather } from './routes/weather';
+import { handleShopEstimate } from './routes/shop';
 import { handleSeedAlerts, seedAlertsFromFixtures } from './routes/dev';
 import { json } from './routes/utils';
 
@@ -75,6 +76,8 @@ app.get('/diagnosis', authMiddleware, handleGetDiagnosisHistory);
 app.post('/diagnosis', authMiddleware, handleCreateDiagnosis);
 // Online diagnosis dibuka tanpa auth untuk demo; tambahkan auth jika diperlukan
 app.post('/diagnosis/online', handleOnlineDiagnosis);
+app.post('/shop-assistant', handleShopAssistant);
+app.post('/shop/estimate', authMiddleware, handleShopEstimate);
 
 app.get('/photos/:key+', authMiddleware, handlePhotoGet);
 app.get('/weather/advice', authMiddleware, handleGetWeatherAdvice);

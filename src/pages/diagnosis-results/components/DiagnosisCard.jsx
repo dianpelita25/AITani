@@ -1,85 +1,89 @@
 import React from 'react';
 import Icon from '../../../components/AppIcon';
 
-const DiagnosisCard = ({ diagnosis, source, provider, modelVersion }) => {
-  const getSeverityColor = (severity) => {
-    switch (severity?.toLowerCase()) {
-      case 'ringan':
-        return 'text-success bg-success/10 border-success/20';
-      case 'sedang':
-        return 'text-warning bg-warning/10 border-warning/20';
-      case 'berat':
-        return 'text-error bg-error/10 border-error/20';
-      default:
-        return 'text-muted-foreground bg-muted/10 border-border';
-    }
-  };
+const getSeverityClasses = (severity) => {
+  const key = (severity || '').toLowerCase();
+  switch (key) {
+    case 'ringan':
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    case 'sedang':
+      return 'bg-amber-50 text-amber-700 border-amber-200';
+    case 'berat':
+      return 'bg-red-50 text-red-700 border-red-200';
+    default:
+      return 'bg-muted text-muted-foreground border-border';
+  }
+};
 
-  const getConfidenceColor = (confidence) => {
-    if (confidence >= 80) return 'text-success';
-    if (confidence >= 60) return 'text-warning';
-    return 'text-error';
-  };
+const getShortDescription = (text) => {
+  if (!text) return '';
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  const sentences = normalized.split(/(?<=[.!?])\s+/).slice(0, 2);
+  let combined = sentences.join(' ');
+  const limit = 220;
+  if (combined.length > limit) {
+    combined = combined.slice(0, limit).trimEnd() + '…';
+  }
+  return combined;
+};
+
+const DiagnosisCard = ({ diagnosis, source, provider, modelVersion }) => {
+  const title = diagnosis?.label || 'Hasil diagnosis';
+  const severityText = diagnosis?.severity || 'Tidak diketahui';
+  const severityClasses = getSeverityClasses(diagnosis?.severity);
+  const confidence =
+    typeof diagnosis?.confidence === 'number' && !Number.isNaN(diagnosis.confidence)
+      ? diagnosis.confidence
+      : null;
+  const shortDesc = getShortDescription(diagnosis?.description);
 
   return (
-    <div className="bg-card rounded-lg border border-border p-6 shadow-agricultural">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-foreground mb-2">
-            {diagnosis?.label}
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            <div className="inline-flex items-center px-2 py-1 rounded-md border text-[10px] font-semibold bg-muted/60 text-muted-foreground border-border">
-              <Icon name={source === 'online' ? 'Cloud' : 'Cpu'} size={12} className="mr-1" />
-              {source === 'online' ? 'AI Online' : source === 'offline-local' ? 'AI Lokal' : 'AI'}{provider ? ` (${provider})` : ''}
+    <div className="bg-card rounded-xl border border-border p-4 md:p-5 shadow-agricultural flex flex-col gap-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 space-y-1">
+          <h3 className="text-xl md:text-2xl font-semibold text-foreground leading-snug">{title}</h3>
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <span
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${severityClasses}`}
+            >
+              <Icon
+                name={
+                  severityText.toLowerCase() === 'berat'
+                    ? 'AlertTriangle'
+                    : severityText.toLowerCase() === 'sedang'
+                    ? 'AlertCircle'
+                    : 'CheckCircle'
+                }
+                size={14}
+              />
+              Tingkat: {severityText}
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium text-foreground">
+              <Icon name="Sparkles" size={14} />
+              Analisis Dokter Tani AI
+            </span>
+          </div>
+        </div>
+
+        {confidence !== null && (
+          <div className="text-right flex-shrink-0">
+            <div className="text-xl md:text-2xl font-semibold text-emerald-500 leading-none">
+              {confidence}%
             </div>
-            {modelVersion && (
-              <div className="inline-flex items-center px-2 py-1 rounded-md border text-[10px] font-semibold bg-muted/60 text-muted-foreground border-border">
-                <Icon name="Info" size={12} className="mr-1" />
-                Model {modelVersion}
-              </div>
-            )}
+            <div className="text-xs text-muted-foreground mt-1">Akurasi</div>
           </div>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            {diagnosis?.description}
-          </p>
-        </div>
-        
-        <div className="ml-4 text-right">
-          <div className={`text-2xl font-bold ${getConfidenceColor(diagnosis?.confidence)}`}>
-            {diagnosis?.confidence}%
-          </div>
-          <p className="text-xs text-muted-foreground">Akurasi</p>
-        </div>
+        )}
       </div>
-      <div className="flex items-center justify-between">
-        <div className={`
-          inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border
-          ${getSeverityColor(diagnosis?.severity)}
-        `}>
-          <Icon 
-            name={diagnosis?.severity === 'berat' ? 'AlertTriangle' : 
-                  diagnosis?.severity === 'sedang' ? 'AlertCircle' : 'CheckCircle'} 
-            size={16} 
-            className="mr-2" 
-          />
-          Tingkat: {diagnosis?.severity}
-        </div>
-        
-        <div className="flex items-center text-sm text-muted-foreground">
-          <Icon name="Zap" size={16} className="mr-1" />
-          AI Analysis
-        </div>
-      </div>
-      {diagnosis?.affectedAreas && (
-        <div className="mt-4 pt-4 border-t border-border">
-          <h4 className="text-sm font-medium text-foreground mb-2">
-            Area Terpengaruh
-          </h4>
+
+      {shortDesc && <p className="text-sm text-muted-foreground mt-2">{shortDesc}</p>}
+
+      {diagnosis?.affectedAreas && Array.isArray(diagnosis.affectedAreas) && diagnosis.affectedAreas.length > 0 && (
+        <div className="pt-2 border-t border-border">
+          <p className="text-xs font-semibold text-foreground mb-2">Area terpengaruh</p>
           <div className="flex flex-wrap gap-2">
-            {diagnosis?.affectedAreas?.map((area, index) => (
-              <span 
-                key={index}
+            {diagnosis.affectedAreas.map((area, idx) => (
+              <span
+                key={idx}
                 className="inline-flex items-center px-2 py-1 bg-muted rounded-md text-xs text-muted-foreground"
               >
                 {area}

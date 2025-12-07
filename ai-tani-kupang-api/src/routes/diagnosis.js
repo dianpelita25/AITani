@@ -1,10 +1,37 @@
 // ai-tani-kupang-api/src/routes/diagnosis.js
 
-import { getIdentity, json, parseMaybeJson, sanitizeFileName, guessContentType, buildPhotoUrl } from './utils';
-import { fetchWeatherForLocation } from '../utils/weather';
+import { getIdentity, json, parseMaybeJson, sanitizeFileName, guessContentType, buildPhotoUrl } from './utils.js';
+import { fetchWeatherForLocation } from '../utils/weather.js';
 
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const IMAGE_PRECHECK_PROMPT = `
+PERAN:
+Anda adalah asisten yang hanya memeriksa KUALITAS FOTO dan apakah objek utama adalah TANAMAN.
+
+TUGAS:
+1. Tentukan apakah objek utama di foto adalah tanaman / bagian tanaman (daun, batang, buah, malai, dll).
+2. Tentukan apakah foto terlalu buram / terlalu gelap / terlalu jauh untuk dinilai.
+3. Berikan penilaian kualitas (quality_score) 0–1:
+   - 1   = sangat jelas
+   - 0.5 = cukup, bisa dipakai
+   - 0   = tidak bisa dipakai
+4. Jangan melakukan diagnosa penyakit / hama.
+5. Balas HANYA dengan JSON.
+
+FORMAT JSON WAJIB:
+{
+  "is_plant": true,
+  "is_blurry": false,
+  "quality_score": 0.9,
+  "status": "ok",
+  "reason": "Foto cukup jelas untuk analisa.",
+  "suggestions": [
+    "Ambil foto lebih dekat ke daun yang sakit.",
+    "Pastikan cahaya cukup dan tidak terlalu silau."
+  ]
+}
+`.trim();
 const PROMPT_TEXT = `
 PERAN UTAMA:
 Anda adalah Sistem Pakar Agronomi AI untuk petani kecil di Indonesia.
@@ -101,6 +128,117 @@ ATURAN TAMBAHAN:
 - Jika Anda ragu antara beberapa penyakit, pilih satu yang paling mungkin sebagai "disease.name", tetapi jelaskan keraguan tersebut di "confidence_explanation.reasoning".
 - Gunakan bahasa Indonesia sederhana yang mudah dipahami petani kecil.
 - Jangan menyarankan bahan kimia yang dilarang internasional atau sangat berbahaya.
+`.trim();
+
+const SHOP_ASSISTANT_PROMPT = `
+PERAN:
+Anda adalah Asisten Logistik Pertanian & Belanja Pintar.
+Tugas: Menghitung estimasi BELANJA obat & alat, serta menyiapkan kata kunci pencarian e-commerce.
+
+INPUT DARI SISTEM:
+- Masalah: {{DISEASE_NAME}}
+- Bahan Aktif Rekomendasi: {{ACTIVE_INGREDIENT}}
+- Lokasi Petani: {{LOCATION}}
+- Luas Lahan / Skala: {{LAND_SIZE}} (Gunakan untuk hitungan volume belanja)
+
+TUGAS & BATASAN (SAFETY RULES):
+1. REKOMENDASI MEREK: Sebutkan 2-3 merek paten/umum (Contoh: Bayer/Syngenta/Nufarm) yang mengandung bahan aktif tersebut.
+2. VOLUME BELANJA (BUKAN DOSIS CAMPUR):
+   - Hitung kasar kebutuhan air (Rumus: ~300L air per Hektar).
+   - Tentukan user harus beli kemasan ukuran berapa agar hemat.
+   - DILARANG memberikan dosis pencampuran (ml per tangki) karena beda merek beda konsentrasi. Cukup sarankan "Beli botol 100ml" atau "Beli botol 500ml".
+3. ESTIMASI BUDGET: Gunakan Range Harga (Rp X - Rp Y), JANGAN harga pasti.
+4. MONETISASI & SEARCH KEYWORD:
+   - Berikan "Search Keyword" spesifik untuk mencari produk tersebut di toko online.
+   - Tambahkan rekomendasi ALAT/APD (Masker/Sprayer) yang relevan dengan masalah (karena alat lebih mudah dikirim dibanding cairan).
+
+OUTPUT JSON:
+{
+  "shopping_advice": {
+    "active_ingredient": "string",
+    "recommended_brands": [
+      {
+        "brand_name": "string (Contoh: Confidor 200SL)",
+        "estimated_price_range": "string (Contoh: Rp 35rb - 50rb)",
+        "ecommerce_keyword": "string (Keyword bersih untuk Shopee, contoh: 'Insektisida Confidor 200SL Bayer Asli')"
+      }
+    ],
+    "volume_calculation": {
+      "analysis": "string (Contoh: Untuk lahan 0.25 Ha, butuh sekitar 5-6 tangki)",
+      "buying_tip": "string (Contoh: Cukup beli 1 botol kemasan 60ml atau 100ml. Jangan beli literan agar tidak mubazir.)"
+    },
+    "complementary_tools": [
+      {
+        "tool_name": "string (Contoh: Masker Pertanian)",
+        "reason": "string (Alasan kenapa perlu)",
+        "ecommerce_keyword": "string (Contoh: 'Masker Respirator 3M Pertanian')"
+      }
+    ]
+  },
+  "shop_finder": {
+    "maps_query": "string (Keyword untuk Google Maps, contoh: 'Toko Pertanian Jual Insektisida dekat saya')"
+  },
+  "safety_disclaimer": "Harga estimasi. Dosis pencampuran WAJIB mengikuti label di kemasan produk."
+}
+`.trim();
+const PLANNER_PROMPT = `
+PERAN:
+Anda adalah Asisten Perencanaan Tindakan Lapang untuk petani kecil.
+
+INPUT (dari sistem):
+- diagnosis: JSON ringkas (label, severity, confidence, description)
+- recommendations: array JSON rekomendasi (id, title, description, category, priority, timeframe)
+- raw_diagnosis: boleh null atau berisi JSON detail (disease, actions.immediate, actions.this_week, treatments, dll)
+- meta: JSON berisi crop_type, lokasi, catatan petani, weather, affected_parts, dll.
+
+TUGAS:
+- Susun rencana bertahap yang praktis dan terurut untuk petani.
+- Bagi menjadi beberapa fase waktu:
+  - immediate (Hari ini - 2 hari ke depan)
+  - this_week (3-7 hari)
+  - next_weeks (1-4 minggu ke depan)
+  - monitoring (pemantauan lanjutan)
+- Gunakan bahasa Indonesia sederhana.
+- Jika diagnosis.confidence < 60, buat fase MONITORING lebih kuat dan tekankan untuk cek ulang / foto ulang sebelum tindakan kimia yang agresif.
+- Jangan memberi dosis campuran baru yang bertentangan dengan diagnosis awal; jika perlu obat kimia, rujuk pada rekomendasi yang sudah ada saja.
+
+FORMAT OUTPUT WAJIB:
+- Model harus BALAS HANYA dengan JSON VALID, TANPA markdown, TANPA teks lain di luar JSON.
+- Bentuk JSON:
+
+{
+  "summary": "string (ringkasan strategi dalam 1-2 kalimat)",
+  "phases": [
+    {
+      "id": "immediate|this_week|next_weeks|monitoring",
+      "title": "string (judul fase, contoh: 'Hari ini - 2 hari ke depan')",
+      "timeframe": "string (contoh: '0-2 hari', '3-7 hari')",
+      "priority": "tinggi|sedang|rendah",
+      "goals": ["string", "string"],
+      "steps": [
+        {
+          "id": "string (id unik langkah, contoh: 'step_buang_daun_berat')",
+          "title": "string (judul langkah singkat)",
+          "description": "string (penjelasan langkah, bahasa petani)",
+          "category": "sanitasi|organik|kimia|pemantauan|lainnya",
+          "related_recommendation_ids": [
+            "string (id rekomendasi dari input.recommendations, boleh kosong)"
+          ]
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    "string (peringatan praktis, contoh: 'Gunakan masker dan sarung tangan saat menyemprot.')"
+  ],
+  "recheck_advice": [
+    "string (kapan petani perlu cek ulang atau foto ulang)"
+  ]
+}
+
+ATURAN TAMBAHAN:
+- Jika tidak ada data recommendations atau raw_diagnosis, tetap buat plan sederhana (sanitasi + monitoring).
+- Jangan menyebut merek dagang baru; jika perlu bahan aktif atau merek, pakai yang sudah muncul di diagnosis / recommendations saja.
 `.trim();
 
 const CROP_PROMPTS = {
@@ -218,6 +356,189 @@ const pickSeverity = (confidence, fallback) => {
     return 'ringan';
 };
 
+const normalizeConfidence = (raw) => {
+    let score = Number(raw) || 0;
+    if (score > 0 && score <= 1) {
+        score = score * 100;
+    }
+    score = Math.round(score);
+    if (score < 0) score = 0;
+    if (score > 100) score = 100;
+    return score;
+};
+
+const applyNormalizedConfidence = (onlineResult, diagnosisObj) => {
+    const raw =
+        onlineResult?.rawResponse?.confidence_explanation?.confidence_score ??
+        onlineResult?.rawResponse?.diagnosis?.confidence ??
+        diagnosisObj?.confidence ??
+        0;
+
+    const score = normalizeConfidence(raw);
+
+    if (diagnosisObj && typeof diagnosisObj === 'object') {
+        diagnosisObj.confidence = score;
+    }
+
+    if (
+        onlineResult &&
+        onlineResult.rawResponse &&
+        typeof onlineResult.rawResponse === 'object'
+    ) {
+        if (!onlineResult.rawResponse.confidence_explanation) {
+            onlineResult.rawResponse.confidence_explanation = {
+                confidence_score: score,
+                reasoning: '',
+                when_to_recheck: [],
+            };
+        } else {
+            onlineResult.rawResponse.confidence_explanation.confidence_score = score;
+        }
+    }
+
+    if (onlineResult && onlineResult.diagnosis) {
+        onlineResult.diagnosis.confidence = score;
+    }
+
+    return score;
+};
+
+function shouldSkipOnlineDiagnosis(precheck) {
+    if (!precheck || typeof precheck !== 'object') return false;
+
+    const isPlant = precheck.is_plant !== false;
+    const isBlurry = !!precheck.is_blurry;
+    const status = precheck.status || 'ok';
+    const quality =
+        typeof precheck.quality_score === 'number'
+            ? precheck.quality_score
+            : 1;
+
+    if (!isPlant) return true;
+    if (status === 'reject') return true;
+    if (quality < 0.3) return true;
+    if (isBlurry && quality < 0.3) return true;
+
+    return false;
+}
+
+function buildPrecheckFailureResult(precheck, meta = {}) {
+    const reason =
+        (precheck && precheck.reason) ||
+        'Foto kurang jelas atau objek utama bukan tanaman, sehingga sistem tidak dapat menganalisis dengan aman.';
+
+    const suggestions =
+        precheck && Array.isArray(precheck.suggestions) && precheck.suggestions.length
+            ? precheck.suggestions.map((s) => String(s))
+            : [
+                  'Ambil foto lebih dekat ke bagian tanaman yang sakit (daun/batang/malai).',
+                  'Pastikan cahaya cukup (tidak terlalu gelap atau silau).',
+                  'Pastikan objek utama adalah tanaman, bukan tanah kosong atau benda lain.',
+              ];
+
+    const diagnosis = {
+        label: 'Foto Tidak Valid',
+        confidence: 0,
+        severity: 'ringan',
+        description: reason,
+    };
+
+    const recommendations = suggestions.map((text, idx) => ({
+        id: `precheck_fix_${idx + 1}`,
+        title: `Perbaiki foto ${idx + 1}`,
+        description: text,
+        category: 'precheck',
+        priority: 'tinggi',
+        timeframe: 'hari ini',
+    }));
+
+    const rawResponse = {
+        disease: {
+            name: 'Foto Tidak Valid',
+            type: 'tidak_pasti',
+            risk_level: 'unknown',
+            short_summary: reason,
+        },
+        danger_if_ignored: {
+            summary: 'Sistem tidak bisa menilai risiko penyakit karena foto tidak jelas.',
+            yield_impact: '',
+            time_frame: '',
+        },
+        actions: {
+            immediate: suggestions,
+            this_week: [],
+        },
+        treatments: {
+            organic: [],
+            chemical: [],
+        },
+        confidence_explanation: {
+            confidence_score: 0,
+            reasoning:
+                'Foto tidak memenuhi kualitas minimal (blur/bukan tanaman/objek terlalu jauh), sehingga model TIDAK melakukan diagnosa.',
+            when_to_recheck: [
+                'Ambil ulang foto setelah memperbaiki kualitas sesuai saran precheck.',
+            ],
+        },
+        precheck,
+        meta,
+    };
+
+    const onlineResult = {
+        source: 'online-precheck',
+        provider: 'precheck',
+        modelVersion: DEFAULT_MODEL_VERSION,
+        diagnosis,
+        recommendations,
+        rawResponse,
+        precheck,
+    };
+
+    return { diagnosis, recommendations, onlineResult };
+}
+
+/**
+ * @typedef {Object} ImagePrecheckResult
+ * @property {boolean} is_plant
+ * @property {boolean} is_blurry
+ * @property {number} quality_score
+ * @property {'ok' | 'retry' | 'reject'} status
+ * @property {string} reason
+ * @property {string[]} suggestions
+ * @property {any} [rawResponse]
+ */
+
+function parseImagePrecheckResponse(text) {
+    if (typeof text !== 'string') {
+        throw new Error('Precheck response is not a string');
+    }
+    let cleaned = (text || '').trim();
+    const fenceMatch = cleaned.match(/```[a-zA-Z0-9]*\s*([\s\S]*?)```/);
+    if (fenceMatch) {
+        cleaned = fenceMatch[1].trim();
+    }
+    if (!cleaned.startsWith('{')) {
+        const first = cleaned.indexOf('{');
+        const last = cleaned.lastIndexOf('}');
+        if (first !== -1 && last !== -1 && last > first) {
+            cleaned = cleaned.slice(first, last + 1).trim();
+        }
+    }
+    const parsed = JSON.parse(cleaned);
+    const result = {
+        is_plant: Boolean(parsed.is_plant ?? true),
+        is_blurry: Boolean(parsed.is_blurry ?? false),
+        quality_score: Number(parsed.quality_score ?? 1),
+        status: ['ok', 'retry', 'reject'].includes(parsed.status) ? parsed.status : 'ok',
+        reason: parsed.reason ? String(parsed.reason) : '',
+        suggestions: Array.isArray(parsed.suggestions)
+            ? parsed.suggestions.map((s) => String(s)).filter(Boolean)
+            : [],
+        rawResponse: parsed,
+    };
+    return result;
+}
+
 const mockOnlineResult = (meta = {}) => ({
     source: 'online-mock',
     provider: 'mock',
@@ -256,6 +577,121 @@ const normalizeOnlineResponse = (data = {}, { provider = 'custom-api', modelVers
         rawResponse: data,
     };
 };
+
+async function runShopAssistant({ env, diseaseName, activeIngredient, location, landSize }) {
+    const fallback = (meta = {}) => ({
+        source: 'shop-assistant-mock',
+        provider: 'mock',
+        shopping_advice: {
+            active_ingredient: activeIngredient || null,
+            recommended_brands: [],
+            volume_calculation: {
+                analysis: 'Data tidak cukup untuk perhitungan otomatis.',
+                buying_tip: 'Diskusikan dengan toko pertanian terdekat.',
+            },
+            complementary_tools: [],
+        },
+        shop_finder: {
+            maps_query: 'Toko Pertanian dekat saya',
+        },
+        safety_disclaimer: 'Ini hanya saran umum. Ikuti selalu label resmi produk.',
+        rawResponse: meta.rawResponse || null,
+    });
+
+    // 1) Custom endpoint jika tersedia
+    if (env.AI_DIAG_ENDPOINT) {
+        try {
+            const payload = {
+                type: 'shop_assistant',
+                disease_name: diseaseName,
+                active_ingredient: activeIngredient,
+                location,
+                land_size: landSize,
+            };
+            const headers = { 'Content-Type': 'application/json' };
+            if (env.AI_DIAG_API_KEY) headers.Authorization = `Bearer ${env.AI_DIAG_API_KEY}`;
+
+            const resp = await fetch(env.AI_DIAG_ENDPOINT, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload),
+            });
+            if (!resp.ok) {
+                const detail = await resp.text();
+                throw new Error(`Shop assistant endpoint error ${resp.status}: ${detail}`);
+            }
+            const data = await resp.json().catch(() => ({}));
+            return {
+                source: 'shop-assistant',
+                provider: 'custom-api',
+                shopping_advice: data.shopping_advice || {},
+                shop_finder: data.shop_finder || null,
+                safety_disclaimer: data.safety_disclaimer || 'Harga estimasi. Ikuti label kemasan.',
+                rawResponse: data,
+            };
+        } catch (err) {
+            console.warn('[runShopAssistant] custom endpoint failed, fallback to mock:', err?.message || err);
+            return fallback({ rawResponse: { error: String(err) } });
+        }
+    }
+
+    // 2) Gemini fallback
+    if (env.GEMINI_API_KEY) {
+        try {
+            const parts = [
+                { text: SHOP_ASSISTANT_PROMPT },
+                { text: `Masalah: ${diseaseName || '-'}` },
+                { text: `Bahan aktif: ${activeIngredient || '-'}` },
+                { text: `Lokasi: ${JSON.stringify(location || null)}` },
+                { text: `Luas lahan: ${JSON.stringify(landSize || null)}` },
+            ];
+
+            const payload = { contents: [{ parts }] };
+            const resp = await fetch(`${GEMINI_URL}?key=${env.GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!resp.ok) {
+                const detail = await resp.text();
+                throw new Error(`Gemini shop assistant error ${resp.status}: ${detail}`);
+            }
+            const data = await resp.json();
+            let text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            let cleaned = (text || '').trim();
+            const fence = cleaned.match(/```[a-zA-Z0-9]*\s*([\s\S]*?)```/);
+            if (fence) cleaned = fence[1].trim();
+            if (!cleaned.startsWith('{')) {
+                const first = cleaned.indexOf('{');
+                const last = cleaned.lastIndexOf('}');
+                if (first !== -1 && last !== -1 && last > first) {
+                    cleaned = cleaned.slice(first, last + 1).trim();
+                }
+            }
+            let parsed;
+            try {
+                parsed = JSON.parse(cleaned);
+            } catch (err) {
+                throw new Error(`Gemini parse failed: ${err?.message || err}`);
+            }
+
+            return {
+                source: 'shop-assistant',
+                provider: 'gemini',
+                shopping_advice: parsed.shopping_advice || {},
+                shop_finder: parsed.shop_finder || null,
+                safety_disclaimer: parsed.safety_disclaimer || 'Harga estimasi. Ikuti label kemasan.',
+                rawResponse: parsed,
+            };
+        } catch (err) {
+            console.warn('[runShopAssistant] Gemini failed, fallback to mock:', err?.message || err);
+            return fallback({ rawResponse: { error: String(err) } });
+        }
+    }
+
+    // 3) Mock total jika tidak ada AI online
+    return fallback();
+}
 
 async function runGeminiDiagnosis({ env, imageBase64, meta }) {
     console.log('[AI] runGeminiDiagnosis called, has apiKey?', !!env.GEMINI_API_KEY);
@@ -478,6 +914,235 @@ ${cropPrompt || '(Gunakan pengetahuan umum tanaman pangan tropis jika prompt spe
     };
 }
 
+/**
+ * @param {{ env: any, imageBase64: string, meta?: any }} params
+ * @returns {Promise<ImagePrecheckResult>}
+ */
+async function runImagePrecheck({ env, imageBase64, meta }) {
+    if (!imageBase64) {
+        return {
+            is_plant: true,
+            is_blurry: false,
+            quality_score: 1,
+            status: 'ok',
+            reason: 'Precheck dilewati: tidak ada gambar.',
+            suggestions: [],
+            rawResponse: null,
+        };
+    }
+
+    // 1) Custom endpoint jika tersedia
+    if (env.AI_PRECHECK_ENDPOINT) {
+        try {
+            const payload = {
+                type: 'image_precheck',
+                image: `data:image/jpeg;base64,${imageBase64}`,
+                meta,
+            };
+            const headers = { 'Content-Type': 'application/json' };
+            if (env.AI_DIAG_API_KEY) headers.Authorization = `Bearer ${env.AI_DIAG_API_KEY}`;
+
+            const resp = await fetch(env.AI_PRECHECK_ENDPOINT, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload),
+            });
+            if (!resp.ok) {
+                const detail = await resp.text();
+                throw new Error(`Precheck endpoint error ${resp.status}: ${detail}`);
+            }
+            const data = await resp.json().catch(() => ({}));
+            return {
+                is_plant: Boolean(data.is_plant ?? true),
+                is_blurry: Boolean(data.is_blurry ?? false),
+                quality_score: Number(data.quality_score ?? 1),
+                status: ['ok', 'retry', 'reject'].includes(data.status) ? data.status : 'ok',
+                reason: data.reason ? String(data.reason) : '',
+                suggestions: Array.isArray(data.suggestions)
+                    ? data.suggestions.map((s) => String(s)).filter(Boolean)
+                    : [],
+                rawResponse: data,
+            };
+        } catch (err) {
+            console.warn('[runImagePrecheck] custom endpoint failed, fallback to ok:', err?.message || err);
+        }
+    }
+
+    // 2) Gemini fallback
+    if (env.GEMINI_API_KEY) {
+        try {
+            const parts = [
+                { text: IMAGE_PRECHECK_PROMPT },
+                ...(meta ? [{ text: `Konteks tambahan (opsional): ${JSON.stringify(meta)}` }] : []),
+                {
+                    inline_data: {
+                        mime_type: 'image/jpeg',
+                        data: imageBase64,
+                    },
+                },
+            ];
+
+            const payload = { contents: [{ parts }] };
+            const resp = await fetch(`${GEMINI_URL}?key=${env.GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!resp.ok) {
+                const detail = await resp.text();
+                throw new Error(`Gemini precheck error ${resp.status}: ${detail}`);
+            }
+            const data = await resp.json();
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const result = parseImagePrecheckResponse(text);
+            result.rawResponse = result.rawResponse || data;
+            return result;
+        } catch (err) {
+            console.warn('[runImagePrecheck] Gemini failed, fallback to ok:', err?.message || err);
+        }
+    }
+
+    // 3) Fallback ok
+    return {
+        is_plant: true,
+        is_blurry: false,
+        quality_score: 1,
+        status: 'ok',
+        reason: 'Precheck otomatis gagal, lanjutkan diagnosa seperti biasa.',
+        suggestions: [],
+        rawResponse: { error: 'precheck_failed' },
+    };
+}
+
+/**
+ * @param {{ env: any, finalResult: any, meta?: any }} params
+ * @returns {Promise<{ source: string, provider: string, plan: any, rawResponse: any }>}
+ */
+async function runPlanner({ env, finalResult, meta }) {
+    const fallbackPlanner = (metaData = {}) => ({
+        source: 'planner-mock',
+        provider: 'mock',
+        plan: {
+            summary: 'Rencana umum: pantau gejala dan lakukan perbaikan dasar.',
+            phases: [
+                {
+                    id: 'immediate',
+                    title: 'Langkah awal',
+                    timeframe: 'Hari ini',
+                    priority: 'sedang',
+                    goals: ['Mengendalikan gejala paling berat', 'Mencegah penyebaran di lahan'],
+                    steps: [
+                        {
+                            id: 'step_observasi',
+                            title: 'Observasi tanaman di beberapa titik',
+                            description:
+                                'Periksa beberapa tanaman di beberapa titik lahan untuk melihat seberapa luas gejala menyebar.',
+                            category: 'pemantauan',
+                            related_recommendation_ids: [],
+                        },
+                    ],
+                },
+            ],
+            warnings: [],
+            recheck_advice: [
+                'Jika gejala makin parah dalam 3-5 hari, konsultasi dengan penyuluh atau foto ulang untuk diagnosa ulang.',
+            ],
+        },
+        rawResponse: { type: 'mock', meta: metaData },
+    });
+
+    const diagnosis = finalResult?.diagnosis || {};
+    const recommendations = Array.isArray(finalResult?.recommendations) ? finalResult.recommendations : [];
+    const rawDiagnosis = finalResult?.rawResponse || null;
+
+    // 1) Custom endpoint
+    if (env.AI_DIAG_ENDPOINT) {
+        try {
+            const payload = {
+                type: 'planner',
+                diagnosis,
+                recommendations,
+                raw_diagnosis: rawDiagnosis,
+                meta,
+            };
+            const headers = { 'Content-Type': 'application/json' };
+            if (env.AI_DIAG_API_KEY) headers.Authorization = `Bearer ${env.AI_DIAG_API_KEY}`;
+
+            const resp = await fetch(env.AI_DIAG_ENDPOINT, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload),
+            });
+            if (!resp.ok) {
+                const detail = await resp.text();
+                throw new Error(`Planner endpoint error ${resp.status}: ${detail}`);
+            }
+            const data = await resp.json().catch(() => ({}));
+            return {
+                source: 'planner',
+                provider: 'custom-api',
+                plan: data.plan || data,
+                rawResponse: data,
+            };
+        } catch (err) {
+            console.warn('[runPlanner] custom endpoint failed, fallback to next:', err?.message || err);
+        }
+    }
+
+    // 2) Gemini fallback
+    if (env.GEMINI_API_KEY) {
+        try {
+            const parts = [
+                { text: PLANNER_PROMPT },
+                {
+                    text: `DATA DIAGNOSA:\n${JSON.stringify(
+                        { diagnosis, recommendations, raw_diagnosis: rawDiagnosis },
+                        null,
+                        2,
+                    )}`,
+                },
+                { text: `KONTEKS TAMBAHAN:\n${JSON.stringify(meta || null, null, 2)}` },
+            ];
+
+            const payload = { contents: [{ parts }] };
+            const resp = await fetch(`${GEMINI_URL}?key=${env.GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!resp.ok) {
+                const detail = await resp.text();
+                throw new Error(`Gemini planner error ${resp.status}: ${detail}`);
+            }
+            const data = await resp.json();
+            let text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            let cleaned = (text || '').trim();
+            const fence = cleaned.match(/```[a-zA-Z0-9]*\s*([\s\S]*?)```/);
+            if (fence) cleaned = fence[1].trim();
+            if (!cleaned.startsWith('{')) {
+                const first = cleaned.indexOf('{');
+                const last = cleaned.lastIndexOf('}');
+                if (first !== -1 && last !== -1 && last > first) {
+                    cleaned = cleaned.slice(first, last + 1).trim();
+                }
+            }
+            const parsed = JSON.parse(cleaned);
+            const plan = parsed.plan || parsed;
+
+            return {
+                source: 'planner',
+                provider: 'gemini',
+                plan,
+                rawResponse: parsed,
+            };
+        } catch (err) {
+            console.warn('[runPlanner] Gemini failed, fallback to mock:', err?.message || err);
+        }
+    }
+
+    return fallbackPlanner(meta);
+}
+
 async function runOnlineDiagnosis({ env, imageBase64, meta }) {
     console.log('[AI] AI_DIAG_ENDPOINT?', !!env.AI_DIAG_ENDPOINT);
     console.log('[AI] GEMINI_API_KEY present?', !!env.GEMINI_API_KEY);
@@ -551,6 +1216,7 @@ const normalizeFinalResponse = ({
     affectedParts,
     localResult,
     onlineResult,
+    planner,
 }) => ({
     id,
     timestamp,
@@ -574,6 +1240,8 @@ const normalizeFinalResponse = ({
     },
     localResult: localResult || null,
     onlineResult: onlineResult || null,
+    precheck: onlineResult?.precheck || null,
+    planner: planner || null,
 });
 
 // Handler untuk GET /api/diagnosis
@@ -679,14 +1347,29 @@ export async function handleCreateDiagnosis(c) {
 
     const localResult = submissionData.localResult ? parseMaybeJson(submissionData.localResult) : null;
 
+    let precheckResult = null;
     let onlineResult = null;
     let onlineError = null;
     if (imageBase64) {
         try {
-            onlineResult = await runOnlineDiagnosis({ env, imageBase64, meta });
+            precheckResult = await runImagePrecheck({ env, imageBase64, meta });
         } catch (err) {
-            onlineError = err?.message || String(err);
-            console.warn('[handleCreateDiagnosis] online AI failed, will fallback to localResult:', onlineError);
+            console.warn('[handleCreateDiagnosis] image precheck failed:', err);
+            precheckResult = null;
+        }
+
+        const skipOnline = shouldSkipOnlineDiagnosis(precheckResult);
+
+        if (skipOnline) {
+            const precheckOnly = buildPrecheckFailureResult(precheckResult, meta);
+            onlineResult = precheckOnly.onlineResult;
+        } else {
+            try {
+                onlineResult = await runOnlineDiagnosis({ env, imageBase64, meta });
+            } catch (err) {
+                onlineError = err?.message || String(err);
+                console.warn('[handleCreateDiagnosis] online AI failed, will fallback to localResult:', onlineError);
+            }
         }
     }
 
@@ -695,6 +1378,17 @@ export async function handleCreateDiagnosis(c) {
         if (onlineResult.rawResponse && typeof onlineResult.rawResponse === 'object' && !onlineResult.rawResponse.weather) {
             onlineResult.rawResponse.weather = meta.weather;
         }
+    }
+
+    if (onlineResult && precheckResult) {
+        onlineResult.precheck = precheckResult;
+        if (onlineResult.rawResponse && typeof onlineResult.rawResponse === 'object' && !onlineResult.rawResponse.precheck) {
+            onlineResult.rawResponse.precheck = precheckResult;
+        }
+    }
+
+    if (onlineResult && onlineResult.diagnosis) {
+        applyNormalizedConfidence(onlineResult, onlineResult.diagnosis);
     }
 
     const finalResult = onlineResult || localResult || mockOnlineResult(meta);
@@ -712,6 +1406,43 @@ export async function handleCreateDiagnosis(c) {
     const id = `diag_${Date.now()}`;
     const now = new Date().toISOString();
     const timestamp = submissionData.timestamp || now;
+
+    // Pastikan confidence diagnosis tersinkron 0-100
+    diagnosis.confidence = normalizeConfidence(diagnosis.confidence);
+    if (onlineResult?.rawResponse) {
+        if (!onlineResult.rawResponse.confidence_explanation) {
+            onlineResult.rawResponse.confidence_explanation = {
+                confidence_score: diagnosis.confidence,
+                reasoning: '',
+                when_to_recheck: [],
+            };
+        } else {
+            onlineResult.rawResponse.confidence_explanation.confidence_score = diagnosis.confidence;
+        }
+    }
+
+    let planner = null;
+    try {
+        if (diagnosis.label !== 'Foto Tidak Valid') {
+            planner = await runPlanner({
+                env,
+                finalResult,
+                meta: {
+                    fieldId: submissionData.field_id,
+                    cropType: submissionData.crop_type,
+                    latitude: submissionData.latitude,
+                    longitude: submissionData.longitude,
+                    notes: submissionData.notes,
+                    affectedParts,
+                    weather: meta.weather || null,
+                    precheck: onlineResult?.precheck || null,
+                },
+            });
+        }
+    } catch (err) {
+        console.warn('[handleCreateDiagnosis] planner failed:', err?.message || err);
+        planner = null;
+    }
 
     await db
         .prepare(`INSERT INTO diagnosis (
@@ -753,6 +1484,7 @@ export async function handleCreateDiagnosis(c) {
         affectedParts: affectedParts,
         localResult,
         onlineResult: onlineResult || (onlineError ? { error: onlineError } : null),
+        planner,
     });
 
     return json(responsePayload, 201, env, request);
@@ -791,7 +1523,39 @@ export async function handleOnlineDiagnosis(c) {
 
     try {
         const base64 = dataUrlToBase64(image);
-        const result = await runOnlineDiagnosis({ env, imageBase64: base64, meta: { ...meta, accountId, userId } });
+        let precheckResult = null;
+        try {
+            precheckResult = await runImagePrecheck({
+                env,
+                imageBase64: base64,
+                meta: { ...meta, accountId, userId },
+            });
+        } catch (err) {
+            console.warn('[handleOnlineDiagnosis] image precheck failed:', err);
+            precheckResult = null;
+        }
+
+        const skipOnline = shouldSkipOnlineDiagnosis(precheckResult);
+
+        let result;
+        if (skipOnline) {
+            const precheckOnly = buildPrecheckFailureResult(precheckResult, { ...meta, accountId, userId });
+            result = precheckOnly.onlineResult;
+        } else {
+            result = await runOnlineDiagnosis({
+                env,
+                imageBase64: base64,
+                meta: { ...meta, accountId, userId },
+            });
+        }
+
+        if (precheckResult && result) {
+            result.precheck = precheckResult;
+            if (result.rawResponse && typeof result.rawResponse === 'object' && !result.rawResponse.precheck) {
+                result.rawResponse.precheck = precheckResult;
+            }
+        }
+
         if (meta.weather && result && !result.weather) {
             result.weather = meta.weather;
             if (result.rawResponse && typeof result.rawResponse === 'object' && !result.rawResponse.weather) {
@@ -803,3 +1567,44 @@ export async function handleOnlineDiagnosis(c) {
         return json({ error: 'Online diagnosis failed', detail: err?.message || err }, 500, env, request);
     }
 }
+
+export async function handleShopAssistant(c) {
+    const env = c.env;
+    const request = c.req.raw;
+
+    let body = {};
+    try {
+        body = await request.json();
+    } catch {
+        return json({ error: 'Invalid JSON' }, 400, env, request);
+    }
+
+    const { diseaseName, activeIngredient, location, landSize } = body || {};
+
+    if (!diseaseName && !activeIngredient) {
+        return json({ error: 'diseaseName atau activeIngredient wajib diisi' }, 400, env, request);
+    }
+
+    try {
+        const result = await runShopAssistant({
+            env,
+            diseaseName,
+            activeIngredient,
+            location: location || null,
+            landSize: landSize || null,
+        });
+        return json(result, 200, env, request);
+    } catch (err) {
+        return json(
+            {
+                error: 'Shop assistant failed',
+                detail: err?.message || String(err),
+            },
+            500,
+            env,
+            request,
+        );
+    }
+}
+
+export { runShopAssistant, normalizeConfidence, applyNormalizedConfidence, runImagePrecheck, parseImagePrecheckResponse, shouldSkipOnlineDiagnosis, buildPrecheckFailureResult, runPlanner };

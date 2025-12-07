@@ -44,6 +44,10 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/setupTests.js',
+    include: [
+      'src/**/*.{test,spec}.{js,jsx,ts,tsx}',
+      'ai-tani-kupang-api/src/**/*.{test,spec}.js',
+    ],
     environmentMatchGlobs: [
       ['ai-tani-kupang-api/**', 'node'],
       ['**/*.worker.test.{js,ts}', 'node'],
@@ -59,6 +63,9 @@ export default defineConfig({
       exclude: [
         'src/**/__mocks__/**',
         'src/**/__fixtures__/**',
+        'tests/**/*.spec.{js,ts}',
+        'tests/**/*.e2e.{js,ts}',
+        'ai-tani-kupang-api/tests/**/*.mjs',
       ],
     },
   },
