@@ -4,7 +4,46 @@ import { getIdentity, json, parseMaybeJson, sanitizeFileName, guessContentType, 
 import { fetchWeatherForLocation } from '../utils/weather.js';
 
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+const resolveGeminiModel = (env, kind) => {
+    const perKind =
+        kind === 'precheck'
+            ? env?.GEMINI_PRECHECK_MODEL
+            : kind === 'planner'
+            ? env?.GEMINI_PLANNER_MODEL
+            : env?.GEMINI_MODEL;
+    const model = (perKind || env?.GEMINI_MODEL || DEFAULT_GEMINI_MODEL).trim();
+    return model || DEFAULT_GEMINI_MODEL;
+};
+const buildGeminiUrl = (env, kind = 'diagnosis') =>
+    `https://generativelanguage.googleapis.com/v1beta/models/${resolveGeminiModel(env, kind)}:generateContent`;
+const isPlannerEnabled = (env) => {
+    const raw = String(env?.AI_PLANNER_ENABLED ?? 'true').toLowerCase();
+    return !['false', '0', 'off', 'no'].includes(raw);
+};
+const isPrecheckEnabled = (env) => {
+    const raw = String(env?.AI_PRECHECK_ENABLED ?? 'true').toLowerCase();
+    return !['false', '0', 'off', 'no'].includes(raw);
+};
+const readPositiveInt = (value) => {
+    const num = Number.parseInt(value, 10);
+    return Number.isFinite(num) && num > 0 ? num : null;
+};
+const buildGenerationConfig = (env, kind) => {
+    const perKind =
+        kind === 'precheck'
+            ? env?.GEMINI_PRECHECK_MAX_TOKENS
+            : kind === 'planner'
+            ? env?.GEMINI_PLANNER_MAX_TOKENS
+            : kind === 'shop'
+            ? env?.GEMINI_SHOP_MAX_TOKENS
+            : env?.GEMINI_DIAG_MAX_TOKENS;
+    const maxOutputTokens =
+        readPositiveInt(perKind) ||
+        readPositiveInt(env?.GEMINI_MAX_OUTPUT_TOKENS);
+    if (!maxOutputTokens) return null;
+    return { maxOutputTokens };
+};
 const IMAGE_PRECHECK_PROMPT = `
 PERAN:
 Anda adalah asisten yang hanya memeriksa KUALITAS FOTO dan apakah objek utama adalah TANAMAN.
@@ -367,6 +406,63 @@ const normalizeConfidence = (raw) => {
     return score;
 };
 
+const extractJsonBlock = (rawText = '') => {
+    let cleaned = String(rawText || '').trim();
+    const fenceMatch = cleaned.match(/```[a-zA-Z0-9]*\s*([\s\S]*?)```/);
+    if (fenceMatch) {
+        cleaned = fenceMatch[1].trim();
+    }
+    if (!cleaned.startsWith('{')) {
+        const first = cleaned.indexOf('{');
+        const last = cleaned.lastIndexOf('}');
+        if (first !== -1 && last !== -1 && last > first) {
+            cleaned = cleaned.slice(first, last + 1).trim();
+        }
+    }
+    return cleaned;
+};
+
+const escapeJsonStringLiterals = (raw = '') => {
+    let out = '';
+    let inString = false;
+    let escaped = false;
+    for (let i = 0; i < raw.length; i += 1) {
+        const ch = raw[i];
+        if (escaped) {
+            out += ch;
+            escaped = false;
+            continue;
+        }
+        if (ch === '\\') {
+            out += ch;
+            escaped = true;
+            continue;
+        }
+        if (ch === '"') {
+            inString = !inString;
+            out += ch;
+            continue;
+        }
+        if (inString && (ch === '\n' || ch === '\r')) {
+            out += '\\n';
+            continue;
+        }
+        if (inString && ch === '\t') {
+            out += '\\t';
+            continue;
+        }
+        out += ch;
+    }
+    return out;
+};
+
+const normalizeJsonText = (rawText = '') => {
+    let cleaned = extractJsonBlock(rawText);
+    cleaned = escapeJsonStringLiterals(cleaned);
+    cleaned = cleaned.replace(/,\s*([}\]])/g, '$1');
+    return cleaned;
+};
+
 const applyNormalizedConfidence = (onlineResult, diagnosisObj) => {
     const raw =
         onlineResult?.rawResponse?.confidence_explanation?.confidence_score ??
@@ -646,8 +742,12 @@ async function runShopAssistant({ env, diseaseName, activeIngredient, location, 
                 { text: `Luas lahan: ${JSON.stringify(landSize || null)}` },
             ];
 
-            const payload = { contents: [{ parts }] };
-            const resp = await fetch(`${GEMINI_URL}?key=${env.GEMINI_API_KEY}`, {
+            const generationConfig = buildGenerationConfig(env, 'shop');
+            const payload = {
+                contents: [{ parts }],
+                ...(generationConfig ? { generationConfig } : {}),
+            };
+            const resp = await fetch(`${buildGeminiUrl(env, 'diagnosis')}?key=${env.GEMINI_API_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
@@ -780,6 +880,7 @@ ${cropPrompt || '(Gunakan pengetahuan umum tanaman pangan tropis jika prompt spe
             : []),
     ];
 
+    const generationConfig = buildGenerationConfig(env, 'diagnosis');
     const payload = {
         contents: [
             {
@@ -794,10 +895,11 @@ ${cropPrompt || '(Gunakan pengetahuan umum tanaman pangan tropis jika prompt spe
                 ],
             },
         ],
+        ...(generationConfig ? { generationConfig } : {}),
     };
 
     console.log('[AI] Calling Gemini API with crop+weather context...');
-    const resp = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    const resp = await fetch(`${buildGeminiUrl(env, 'diagnosis')}?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -810,22 +912,7 @@ ${cropPrompt || '(Gunakan pengetahuan umum tanaman pangan tropis jika prompt spe
 
     const data = await resp.json();
     let text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    let cleaned = (text || '').trim();
-
-    // 1) kalau ada code fence ```json ... ``` ambil isinya saja
-    const fenceMatch = cleaned.match(/```[a-zA-Z0-9]*\s*([\s\S]*?)```/);
-    if (fenceMatch) {
-        cleaned = fenceMatch[1].trim();
-    }
-
-    // 2) kalau masih ada teks lain, potong dari { pertama sampai } terakhir
-    if (!cleaned.startsWith('{')) {
-        const first = cleaned.indexOf('{');
-        const last = cleaned.lastIndexOf('}');
-        if (first !== -1 && last !== -1 && last > first) {
-            cleaned = cleaned.slice(first, last + 1).trim();
-        }
-    }
+    const cleaned = normalizeJsonText(text || '');
 
     let parsed;
     try {
@@ -982,8 +1069,12 @@ async function runImagePrecheck({ env, imageBase64, meta }) {
                 },
             ];
 
-            const payload = { contents: [{ parts }] };
-            const resp = await fetch(`${GEMINI_URL}?key=${env.GEMINI_API_KEY}`, {
+            const generationConfig = buildGenerationConfig(env, 'precheck');
+            const payload = {
+                contents: [{ parts }],
+                ...(generationConfig ? { generationConfig } : {}),
+            };
+            const resp = await fetch(`${buildGeminiUrl(env, 'precheck')}?key=${env.GEMINI_API_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
@@ -1104,8 +1195,12 @@ async function runPlanner({ env, finalResult, meta }) {
                 { text: `KONTEKS TAMBAHAN:\n${JSON.stringify(meta || null, null, 2)}` },
             ];
 
-            const payload = { contents: [{ parts }] };
-            const resp = await fetch(`${GEMINI_URL}?key=${env.GEMINI_API_KEY}`, {
+            const generationConfig = buildGenerationConfig(env, 'planner');
+            const payload = {
+                contents: [{ parts }],
+                ...(generationConfig ? { generationConfig } : {}),
+            };
+            const resp = await fetch(`${buildGeminiUrl(env, 'planner')}?key=${env.GEMINI_API_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
@@ -1351,14 +1446,17 @@ export async function handleCreateDiagnosis(c) {
     let onlineResult = null;
     let onlineError = null;
     if (imageBase64) {
-        try {
-            precheckResult = await runImagePrecheck({ env, imageBase64, meta });
-        } catch (err) {
-            console.warn('[handleCreateDiagnosis] image precheck failed:', err);
-            precheckResult = null;
+        const precheckEnabled = isPrecheckEnabled(env);
+        if (precheckEnabled) {
+            try {
+                precheckResult = await runImagePrecheck({ env, imageBase64, meta });
+            } catch (err) {
+                console.warn('[handleCreateDiagnosis] image precheck failed:', err);
+                precheckResult = null;
+            }
         }
 
-        const skipOnline = shouldSkipOnlineDiagnosis(precheckResult);
+        const skipOnline = precheckEnabled && shouldSkipOnlineDiagnosis(precheckResult);
 
         if (skipOnline) {
             const precheckOnly = buildPrecheckFailureResult(precheckResult, meta);
@@ -1423,7 +1521,7 @@ export async function handleCreateDiagnosis(c) {
 
     let planner = null;
     try {
-        if (diagnosis.label !== 'Foto Tidak Valid') {
+        if (isPlannerEnabled(env) && diagnosis.label !== 'Foto Tidak Valid') {
             planner = await runPlanner({
                 env,
                 finalResult,
@@ -1524,18 +1622,21 @@ export async function handleOnlineDiagnosis(c) {
     try {
         const base64 = dataUrlToBase64(image);
         let precheckResult = null;
-        try {
-            precheckResult = await runImagePrecheck({
-                env,
-                imageBase64: base64,
-                meta: { ...meta, accountId, userId },
-            });
-        } catch (err) {
-            console.warn('[handleOnlineDiagnosis] image precheck failed:', err);
-            precheckResult = null;
+        const precheckEnabled = isPrecheckEnabled(env);
+        if (precheckEnabled) {
+            try {
+                precheckResult = await runImagePrecheck({
+                    env,
+                    imageBase64: base64,
+                    meta: { ...meta, accountId, userId },
+                });
+            } catch (err) {
+                console.warn('[handleOnlineDiagnosis] image precheck failed:', err);
+                precheckResult = null;
+            }
         }
 
-        const skipOnline = shouldSkipOnlineDiagnosis(precheckResult);
+        const skipOnline = precheckEnabled && shouldSkipOnlineDiagnosis(precheckResult);
 
         let result;
         if (skipOnline) {
@@ -1607,4 +1708,44 @@ export async function handleShopAssistant(c) {
     }
 }
 
-export { runShopAssistant, normalizeConfidence, applyNormalizedConfidence, runImagePrecheck, parseImagePrecheckResponse, shouldSkipOnlineDiagnosis, buildPrecheckFailureResult, runPlanner };
+export async function handlePlannerOnDemand(c) {
+    const env = c.env;
+    const request = c.req.raw;
+
+    let body = {};
+    try {
+        body = await request.json();
+    } catch {
+        return json({ error: 'Invalid JSON' }, 400, env, request);
+    }
+
+    const diagnosis = body?.diagnosis || null;
+    const recommendations = Array.isArray(body?.recommendations) ? body.recommendations : [];
+    const rawDiagnosis = body?.raw_diagnosis ?? body?.rawDiagnosis ?? body?.rawResponse ?? null;
+    const meta = body?.meta || null;
+
+    try {
+        const planner = await runPlanner({
+            env,
+            finalResult: {
+                diagnosis,
+                recommendations,
+                rawResponse: rawDiagnosis,
+            },
+            meta,
+        });
+        return json(planner, 200, env, request);
+    } catch (err) {
+        return json(
+            {
+                error: 'Planner failed',
+                detail: err?.message || String(err),
+            },
+            500,
+            env,
+            request,
+        );
+    }
+}
+
+export { runShopAssistant, normalizeConfidence, applyNormalizedConfidence, runImagePrecheck, parseImagePrecheckResponse, shouldSkipOnlineDiagnosis, buildPrecheckFailureResult, runPlanner, isPlannerEnabled };

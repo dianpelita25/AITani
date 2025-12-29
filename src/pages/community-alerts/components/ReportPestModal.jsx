@@ -40,9 +40,10 @@ const initialForm = {
   location: '',
   coordinates: null,   // { lat, lng }
   photo: null,
+  photoName: '',
 };
 
-export default function ReportPestModal({ isOpen, onClose, className = '' }) {
+export default function ReportPestModal({ isOpen, onClose, className = '', prefill = null }) {
   const [createAlert] = useCreateAlertMutation();
   const [form, setForm] = useState(initialForm);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -52,6 +53,10 @@ export default function ReportPestModal({ isOpen, onClose, className = '' }) {
   // Ambil GPS otomatis saat modal dibuka
   useEffect(() => {
     if (!isOpen) return;
+    if (prefill?.coordinates || prefill?.location) {
+      if (prefill?.coordinates) setLocStatus('success');
+      return;
+    }
     if (!navigator.geolocation) return;
     setLocStatus('loading');
     navigator.geolocation.getCurrentPosition(
@@ -67,7 +72,23 @@ export default function ReportPestModal({ isOpen, onClose, className = '' }) {
       () => setLocStatus('error'),
       { enableHighAccuracy: true, maximumAge: 60000, timeout: 8000 }
     );
-  }, [isOpen]);
+  }, [isOpen, prefill]);
+
+  useEffect(() => {
+    if (!isOpen || !prefill) return;
+    const nextForm = { ...initialForm, ...prefill };
+    setForm(nextForm);
+    if (prefill?.photo) {
+      if (typeof prefill.photo === 'string') {
+        setPhotoPreview(prefill.photo);
+      } else if (prefill.photo instanceof File) {
+        setPhotoPreview(URL.createObjectURL(prefill.photo));
+      }
+    } else if (prefill?.photoPreview) {
+      setPhotoPreview(prefill.photoPreview);
+    }
+    if (prefill?.coordinates) setLocStatus('success');
+  }, [isOpen, prefill]);
 
   const onChange = (field, value) => setForm((s) => ({ ...s, [field]: value }));
 
@@ -88,7 +109,7 @@ export default function ReportPestModal({ isOpen, onClose, className = '' }) {
       alert('Ukuran foto maksimal 5MB');
       return;
     }
-    setForm((s) => ({ ...s, photo: file }));
+    setForm((s) => ({ ...s, photo: file, photoName: file.name || '' }));
     setPhotoPreview(URL.createObjectURL(file));
   };
 
@@ -125,7 +146,10 @@ export default function ReportPestModal({ isOpen, onClose, className = '' }) {
       timestamp: new Date().toISOString(),
     };
     if (form.photo) {
-      if (forQueue) {
+      if (typeof form.photo === 'string') {
+        payload.photo = form.photo;
+        if (form.photoName) payload.photoName = form.photoName;
+      } else if (forQueue) {
         payload.photo = await fileToDataURL(form.photo);
         payload.photoName = form.photo.name || 'photo.jpg';
       } else {

@@ -1,5 +1,7 @@
 import React from 'react';
+import AppImage from '../../../components/AppImage';
 import Icon from '../../../components/AppIcon';
+import normalizePhotoUrl from '../../../utils/normalizePhotoUrl';
 
 const HistoryCard = ({ historyItem, onViewDetails }) => {
   const getSeverityColor = (severity) => {
@@ -22,6 +24,7 @@ const HistoryCard = ({ historyItem, onViewDetails }) => {
       day: 'numeric', month: 'long', year: 'numeric'
     });
   };
+  const photoSrc = normalizePhotoUrl(historyItem?.photo_key, historyItem?.photo_url);
 
   return (
     <div 
@@ -29,11 +32,15 @@ const HistoryCard = ({ historyItem, onViewDetails }) => {
       onClick={() => onViewDetails(historyItem)}
     >
       <div className="flex items-center space-x-4">
-        <div className="w-16 h-16 bg-muted rounded-lg flex-shrink-0 overflow-hidden">
-          {historyItem?.photo_url ? (
-            <img src={historyItem.photo_url} alt="Foto diagnosis" className="w-full h-full object-cover" loading="lazy" />
+        <div className="w-16 h-16 bg-muted rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center">
+          {photoSrc ? (
+            <AppImage
+              src={photoSrc}
+              alt="Foto diagnosis"
+              className="w-full h-full object-cover"
+            />
           ) : (
-            <Icon name="Leaf" size={32} className="text-muted-foreground m-auto" />
+            <Icon name="Leaf" size={32} className="text-muted-foreground" />
           )}
         </div>
         <div className="flex-1 min-w-0">

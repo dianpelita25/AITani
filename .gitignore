@@ -18,10 +18,9 @@ dist/
 build/
 
 # ======================
-# CLOUDFARE / WRANGLER
+# CLOUDFLARE / WRANGLER
 # ======================
 .wrangler/
-.wrangler/**
 **/.wrangler/tmp/
 **/.wrangler/state/
 

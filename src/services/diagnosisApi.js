@@ -65,10 +65,17 @@ export const diagnosisApi = api.injectEndpoints({
       invalidatesTags: ['DiagnosisHistory'],
       // --- AKHIR DARI PERUBAHAN ---
     }),
+    generateDiagnosisPlanner: builder.mutation({
+      query: (payload) => ({
+        url: 'diagnosis/planner',
+        method: 'POST',
+        body: payload,
+      }),
+    }),
   }),
 });
 
 // --- PERUBAHAN DI SINI ---
 // Ekspor hook baru bersama dengan yang lama
-export const { useCreateDiagnosisMutation, useGetDiagnosisHistoryQuery } = diagnosisApi;
+export const { useCreateDiagnosisMutation, useGetDiagnosisHistoryQuery, useGenerateDiagnosisPlannerMutation } = diagnosisApi;
 // --- AKHIR DARI PERUBAHAN ---

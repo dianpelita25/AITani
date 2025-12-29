@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { enqueueRequest } from '../../offline/queueService';
 import { useCreateFarmTaskMutation } from '../../services/farmTasksApi';
+import { useCreateAlertMutation } from '../../services/alertsApi';
+import { useGenerateDiagnosisPlannerMutation } from '../../services/diagnosisApi';
 import { toast } from 'react-hot-toast';
 import Button from '../../components/ui/Button';
 import DiagnosisHeader from './components/DiagnosisHeader';
@@ -28,6 +30,8 @@ const DiagnosisResults = () => {
 
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [createEvent] = useCreateFarmTaskMutation();
+  const [createAlert] = useCreateAlertMutation();
+  const [generatePlanner, { isLoading: plannerLoading }] = useGenerateDiagnosisPlannerMutation();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSaving, setIsSaving] = useState(false);
   const [shopModalOpen, setShopModalOpen] = useState(false);
@@ -36,6 +40,9 @@ const DiagnosisResults = () => {
   const [shopAdviceOpen, setShopAdviceOpen] = useState(false);
   const [shopAdviceLoading, setShopAdviceLoading] = useState(false);
   const [shopAdviceError, setShopAdviceError] = useState(null);
+  const [isReporting, setIsReporting] = useState(false);
+  const [planner, setPlanner] = useState(null);
+  const [plannerError, setPlannerError] = useState(null);
 
   const fallbackData = {
     image: { url: '', cropType: 'Unknown', location: { address: 'Lahan Utama' } },
@@ -46,6 +53,9 @@ const DiagnosisResults = () => {
   };
 
   const diagnosisData = location?.state?.diagnosisData || fallbackData;
+  useEffect(() => {
+    setPlanner(diagnosisData?.planner || null);
+  }, [diagnosisData?.planner]);
   const debugInfo = diagnosisData?.debug;
   const aiDetails = diagnosisData?.onlineResult?.rawResponse || null;
   const diseaseName =
@@ -68,10 +78,10 @@ const DiagnosisResults = () => {
     diagnosisData?.onlineResult?.precheck ||
     diagnosisData?.onlineResult?.rawResponse?.precheck ||
     null;
-  const plannerPlan = diagnosisData?.planner?.plan || null;
+  const plannerPlan = planner?.plan || null;
   const isPlannerGeneric =
-    !!diagnosisData?.planner &&
-    (diagnosisData.planner?.source === 'planner-mock' || diagnosisData.planner?.provider === 'mock');
+    !!planner &&
+    (planner?.source === 'planner-mock' || planner?.provider === 'mock');
   const activeIngredientFromAI =
     diagnosisData?.onlineResult?.rawResponse?.treatments?.chemical?.[0]?.active_ingredient || null;
 
@@ -195,6 +205,120 @@ const DiagnosisResults = () => {
     }
     return Array.from(new Set(result)).slice(0, 6);
   };
+  const mapReportPestType = (label = '') => {
+    const lower = String(label || '').toLowerCase();
+    if (lower.includes('wereng')) return 'wereng';
+    if (lower.includes('ulat')) return 'ulat';
+    if (lower.includes('kutu')) return 'kutu';
+    if (lower.includes('trips')) return 'trips';
+    if (lower.includes('penggerek')) return 'penggerek';
+    return 'lainnya';
+  };
+  const mapReportSeverity = (severity = '') => {
+    const value = String(severity || '').toLowerCase();
+    if (value === 'berat' || value === 'tinggi') return 'tinggi';
+    if (value === 'ringan' || value === 'rendah' || value === 'baik') return 'rendah';
+    return 'sedang';
+  };
+  const formatCropLabel = (value = '') => {
+    if (!value) return '';
+    const cleaned = String(value).replace(/_/g, ' ').trim();
+    return cleaned ? cleaned[0].toUpperCase() + cleaned.slice(1) : '';
+  };
+  const buildCommunityReportDraft = () => {
+    const label = diagnosisData?.diagnosis?.label || diagnosisData?.label || '';
+    const description = diagnosisData?.diagnosis?.description || '';
+    const confidence = diagnosisData?.diagnosis?.confidence;
+    const cropTypeRaw =
+      diagnosisData?.meta?.cropType ||
+      diagnosisData?.meta?.crop_type ||
+      diagnosisData?.image?.cropType ||
+      diagnosisData?.cropType ||
+      '';
+    const cropType = formatCropLabel(cropTypeRaw);
+    const latRaw = diagnosisData?.meta?.latitude ?? diagnosisData?.latitude ?? null;
+    const lonRaw = diagnosisData?.meta?.longitude ?? diagnosisData?.longitude ?? null;
+    const latNum = latRaw !== null && latRaw !== '' ? Number(latRaw) : null;
+    const lonNum = lonRaw !== null && lonRaw !== '' ? Number(lonRaw) : null;
+    const hasCoords = Number.isFinite(latNum) && Number.isFinite(lonNum);
+    const coords = hasCoords ? { lat: latNum, lng: lonNum } : null;
+    const locationText =
+      diagnosisData?.image?.location?.address ||
+      (hasCoords ? `${latNum.toFixed(6)}, ${lonNum.toFixed(6)}` : '');
+    const descParts = [];
+    if (label) descParts.push(`Hasil diagnosis: ${label}.`);
+    if (description) descParts.push(description);
+    if (typeof confidence === 'number' && Number.isFinite(confidence)) {
+      descParts.push(`Tingkat keyakinan: ${Math.round(confidence)}%.`);
+    }
+    const imageUrl = diagnosisData?.image?.url || '';
+    const imageKey =
+      diagnosisData?.image?.key ||
+      diagnosisData?.photo?.key ||
+      diagnosisData?.photoKey ||
+      null;
+    const imageName =
+      diagnosisData?.image?.name ||
+      diagnosisData?.photo?.name ||
+      diagnosisData?.photoName ||
+      null;
+    const isDataUrl = typeof imageUrl === 'string' && imageUrl.startsWith('data:');
+    const photo = isDataUrl ? imageUrl : null;
+    const photoName = photo ? (imageName || 'diagnosis-photo.jpg') : null;
+    const photoUrl = !isDataUrl && imageUrl ? imageUrl : null;
+
+    return {
+      pestType: mapReportPestType(label),
+      severity: mapReportSeverity(diagnosisData?.diagnosis?.severity),
+      affectedCrops: cropType,
+      description: descParts.join(' ').trim() || 'Laporan dari hasil diagnosis.',
+      location: locationText,
+      coordinates: coords,
+      photo,
+      photoName,
+      photoKey: imageKey,
+      photoUrl,
+    };
+  };
+
+  const buildPlannerPayload = () => {
+    const meta = diagnosisData?.meta || {};
+    const affectedParts =
+      meta.affectedParts ||
+      meta.affected_parts ||
+      diagnosisData?.onlineResult?.rawResponse?.meta?.affected_parts ||
+      null;
+
+    return {
+      diagnosis: diagnosisData?.diagnosis || null,
+      recommendations: Array.isArray(diagnosisData?.recommendations)
+        ? diagnosisData.recommendations
+        : [],
+      raw_diagnosis:
+        aiDetails ||
+        diagnosisData?.onlineResult?.rawResponse ||
+        diagnosisData?.localResult?.rawResponse ||
+        null,
+      meta: {
+        fieldId:
+          meta.fieldId ||
+          meta.field_id ||
+          diagnosisData?.image?.location?.address ||
+          null,
+        cropType:
+          meta.cropType ||
+          meta.crop_type ||
+          diagnosisData?.image?.cropType ||
+          null,
+        latitude: meta.latitude ?? diagnosisData?.latitude ?? null,
+        longitude: meta.longitude ?? diagnosisData?.longitude ?? null,
+        notes: meta.notes || null,
+        affectedParts,
+        weather: weather || meta.weather || null,
+        precheck: precheck || null,
+      },
+    };
+  };
   const pantanganItems = extractPantangan(aiDetails);
   const showDebugAi = (() => {
     if (!aiDetails) return false;
@@ -215,6 +339,56 @@ const DiagnosisResults = () => {
   }, []);
 
   const handleShare = () => setIsShareOpen(true);
+  const handleReportToCommunity = async () => {
+    const reportDraft = buildCommunityReportDraft();
+    const shouldAuto = window.confirm(
+      'Simpan hasil diagnosis ke Komunitas sekarang?'
+    );
+
+    if (!shouldAuto) {
+      navigate('/community-alerts', { state: { openReport: true, reportDraft } });
+      return;
+    }
+
+    setIsReporting(true);
+    try {
+      await createAlert(reportDraft).unwrap();
+      toast.success('Laporan komunitas berhasil dikirim.', { icon: 'OK' });
+      navigate('/community-alerts');
+    } catch (err) {
+      console.error('Gagal kirim laporan komunitas:', err);
+      try {
+        await enqueueRequest({ type: 'createAlert', payload: reportDraft });
+        toast('Anda sedang offline. Laporan disimpan dan akan disinkronkan.', { icon: 'OK' });
+        navigate('/community-alerts');
+      } catch (queueErr) {
+        const message =
+          err?.data?.detail ||
+          err?.data?.error ||
+          err?.message ||
+          'Gagal menyimpan laporan komunitas.';
+        toast.error(message, { icon: '!' });
+      }
+    } finally {
+      setIsReporting(false);
+    }
+  };
+  const handleGeneratePlanner = async () => {
+    setPlannerError(null);
+    try {
+      const payload = buildPlannerPayload();
+      const result = await generatePlanner(payload).unwrap();
+      setPlanner(result);
+    } catch (err) {
+      const message =
+        err?.data?.detail ||
+        err?.data?.error ||
+        err?.error ||
+        'Gagal membuat rencana tindakan. Coba lagi.';
+      setPlannerError(message);
+      toast.error(message, { icon: '??' });
+    }
+  };
 
   const handleSaveAllPlans = async () => {
     if (!diagnosisData?.recommendations?.length) {
@@ -454,6 +628,26 @@ const DiagnosisResults = () => {
                 <p className="text-sm text-muted-foreground">
                   {plannerPlan?.summary || 'Rencana tindakan belum tersedia.'}
                 </p>
+                {!plannerPlan && diagnosisData?.diagnosis?.label !== 'Foto Tidak Valid' && (
+                  <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                      onClick={handleGeneratePlanner}
+                      loading={plannerLoading}
+                      disabled={!isOnline || plannerLoading}
+                    >
+                      Buat rencana tindakan
+                    </Button>
+                    {!isOnline && (
+                      <span className="text-[11px] text-muted-foreground">Butuh koneksi internet.</span>
+                    )}
+                    {plannerError && (
+                      <span className="text-[11px] text-red-500">{plannerError}</span>
+                    )}
+                  </div>
+                )}
                 {isPlannerGeneric && (
                   <div className="mt-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-foreground space-y-1">
                     <div className="font-semibold text-foreground">Rencana masih generik</div>
@@ -638,7 +832,13 @@ const DiagnosisResults = () => {
           </div>
         </div>
 
-        <ActionButtons onShare={handleShare} onSaveAllPlans={handleSaveAllPlans} hasRecommendations={diagnosisData.recommendations?.length > 0} />
+        <ActionButtons
+          onShare={handleShare}
+          onSaveAllPlans={handleSaveAllPlans}
+          hasRecommendations={diagnosisData.recommendations?.length > 0}
+          onReportToCommunity={handleReportToCommunity}
+          isReporting={isReporting}
+        />
       </div>
 
       <ShareActionSheet

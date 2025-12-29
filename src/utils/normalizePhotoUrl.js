@@ -10,14 +10,22 @@
  * @returns {string | null}
  */
 export default function normalizePhotoUrl(photoKey, photoUrl) {
-  if (photoKey) {
-    const safeKey = sanitizeKey(String(photoKey));
-    return `/api/photos/${encodeURIComponent(safeKey)}`;
-  }
   if (photoUrl) {
-    return sanitizeUrl(String(photoUrl));
+    const sanitized = sanitizeUrl(String(photoUrl));
+    if (shouldPreferKey(sanitized, photoKey)) {
+      return buildApiUrl(photoKey);
+    }
+    return sanitized;
+  }
+  if (photoKey) {
+    return buildApiUrl(photoKey);
   }
   return null;
+}
+
+function buildApiUrl(photoKey) {
+  const safeKey = sanitizeKey(String(photoKey));
+  return `/api/photos/${encodeURIComponent(safeKey)}`;
 }
 
 function sanitizeKey(key) {
@@ -28,6 +36,21 @@ function sanitizeKey(key) {
     }
   } catch (_) {}
   return key;
+}
+
+function shouldPreferKey(url, photoKey) {
+  if (!photoKey) return false;
+  if (typeof window === 'undefined' || !window.location) return false;
+  let resolved;
+  try {
+    resolved = new URL(url, window.location.origin);
+  } catch {
+    return false;
+  }
+  const host = resolved.hostname;
+  const isLocalHost = host === 'localhost' || host === '127.0.0.1';
+  if (!isLocalHost) return false;
+  return resolved.pathname.startsWith('/r2/');
 }
 
 function sanitizeUrl(url) {

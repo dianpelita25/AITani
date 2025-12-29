@@ -24,6 +24,66 @@ const fileToDataURL = (file) =>
     reader.readAsDataURL(file);
   });
 
+const readNumber = (value, fallback) => {
+  const num = Number(value);
+  return Number.isFinite(num) && num > 0 ? num : fallback;
+};
+
+const PHOTO_MAX_SIDE = readNumber(import.meta.env.VITE_PHOTO_MAX_SIDE, 1280);
+const PHOTO_QUALITY = readNumber(import.meta.env.VITE_PHOTO_QUALITY, 0.72);
+
+const compressImageFile = (file, { maxSide, quality } = {}) =>
+  new Promise((resolve) => {
+    if (!(file instanceof File) || !file.type.startsWith('image/')) {
+      resolve(file);
+      return;
+    }
+
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const maxDim = Math.max(img.width || 0, img.height || 0);
+      if (!maxDim) {
+        resolve(file);
+        return;
+      }
+
+      const targetMax = readNumber(maxSide, 1280);
+      const scale = maxDim > targetMax ? targetMax / maxDim : 1;
+      const targetW = Math.max(1, Math.round(img.width * scale));
+      const targetH = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(file);
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, targetW, targetH);
+      const safeQuality = Math.min(1, Math.max(0.1, readNumber(quality, 0.72)));
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(file);
+            return;
+          }
+          const baseName = (file.name || 'photo').replace(/\.[^.]+$/, '');
+          resolve(new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' }));
+        },
+        'image/jpeg',
+        safeQuality
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(file);
+    };
+    img.src = objectUrl;
+  });
+
 const PhotoDiagnosis = () => {
   const navigate = useNavigate();
   const ENABLE_ONLINE_AI = (import.meta.env.VITE_ENABLE_ONLINE_AI ?? 'true') === 'true';
@@ -60,6 +120,8 @@ const PhotoDiagnosis = () => {
   const buildNavigationPayload = (base, opts = {}) => {
     const { diagnosis, recommendations, source, provider, modelVersion, timestamp } = base || {};
     const imageUrl = base?.photo?.url || opts.fallbackImageUrl || '';
+    const imageKey = base?.photo?.key || null;
+    const imageName = base?.photo?.name || null;
 
     return {
       diagnosis,
@@ -70,6 +132,8 @@ const PhotoDiagnosis = () => {
       timestamp: timestamp || new Date().toISOString(),
       image: {
         url: imageUrl,
+        key: imageKey,
+        name: imageName,
         cropType: opts.cropType || 'Unknown',
         location: {
           latitude: opts.latitude,
@@ -92,9 +156,13 @@ const PhotoDiagnosis = () => {
   const handleFormSubmit = async (data) => {
     setIsProcessing(true);
     setFormData(data);
-    const submissionData = { ...data, photo: capturedImage };
+    const compressedPhoto = capturedImage
+      ? await compressImageFile(capturedImage, { maxSide: PHOTO_MAX_SIDE, quality: PHOTO_QUALITY })
+      : null;
+    const photoForSubmit = compressedPhoto || capturedImage;
+    const submissionData = { ...data, photo: photoForSubmit };
     const isCurrentlyOnline = navigator.onLine;
-    const imageDataUrl = capturedImage ? await fileToDataURL(capturedImage) : '';
+    const imageDataUrl = photoForSubmit ? await fileToDataURL(photoForSubmit) : '';
 
     let serverResult = null;
     if (ENABLE_ONLINE_AI && isCurrentlyOnline) {

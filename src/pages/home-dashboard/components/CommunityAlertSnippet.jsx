@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
+import AppImage from '../../../components/AppImage';
 import { useGetAlertsQuery } from '../../../services/alertsApi'; // <-- LANGKAH 1: IMPORT HOOK
 import normalizePhotoUrl from '../../../utils/normalizePhotoUrl';
 
@@ -105,7 +106,11 @@ const CommunityAlertSnippet = ({ className = '' }) => {
           >
             {imgSrc && (
               <div className="mb-3 overflow-hidden rounded-lg border border-border/60">
-                <img src={imgSrc} alt="Foto laporan" className="w-full h-32 object-cover" loading="lazy" />
+                <AppImage
+                  src={imgSrc}
+                  alt="Foto laporan"
+                  className="w-full h-32 object-cover"
+                />
               </div>
             )}
             <div className="flex items-start justify-between mb-3">

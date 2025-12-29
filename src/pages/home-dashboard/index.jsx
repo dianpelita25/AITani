@@ -124,7 +124,7 @@ export default function HomeDashboard() {
         <div className="mx-auto w-full max-w-screen-xl px-4 md:px-6 lg:px-8 py-6 md:py-8">
           {/* Hero */}
           <div className="mb-6 md:mb-8">
-            <WelcomeHeader />
+        <WelcomeHeader userPos={userPos} />
           </div>
 
           {/* Grid Desktop: 8 / 4 */}

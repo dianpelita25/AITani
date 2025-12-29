@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGetDiagnosisHistoryQuery } from '../../services/diagnosisApi';
+import normalizePhotoUrl from '../../utils/normalizePhotoUrl';
 import BottomNavigation from '../../components/ui/BottomNavigation';
 import LoadingOverlay from '../../components/ui/LoadingOverlay';
 import Icon from '../../components/AppIcon';
@@ -32,7 +33,9 @@ const DiagnosisHistory = () => {
       provider: historyItem.provider || null,
       modelVersion: historyItem.model_version || null,
       image: {
-        url: historyItem.photo_url || null,
+        url: normalizePhotoUrl(historyItem.photo_key, historyItem.photo_url),
+        key: historyItem.photo_key || null,
+        name: historyItem.photo_name || null,
         cropType: historyItem.crop_type,
         location: {
           lat: historyItem.latitude,

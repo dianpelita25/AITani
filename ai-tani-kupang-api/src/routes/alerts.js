@@ -65,6 +65,19 @@ export async function handleCreateAlert(c) {
             body = await request.json();
         }
 
+        const bodyPhotoKey = body.photo_key ?? body.photoKey ?? null;
+        const bodyPhotoUrl = body.photo_url ?? body.photoUrl ?? null;
+        const bodyPhotoName = body.photo_name ?? body.photoName ?? null;
+
+        if (!photoKey && bodyPhotoKey) {
+            photoKey = bodyPhotoKey;
+            photoName = photoName || bodyPhotoName;
+            photoUrl = bodyPhotoUrl || buildPhotoUrl(request, env, photoKey);
+        } else if (!photoUrl && bodyPhotoUrl) {
+            photoUrl = bodyPhotoUrl;
+            photoName = photoName || bodyPhotoName;
+        }
+
         const now = new Date().toISOString();
         let coordinates = body.coordinates ?? body.coords ?? null;
         if (typeof coordinates === "string") { try { coordinates = JSON.parse(coordinates); } catch { } }

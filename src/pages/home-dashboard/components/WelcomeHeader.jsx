@@ -1,16 +1,110 @@
 // src/pages/home-dashboard/components/WelcomeHeader.jsx
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux'; // <-- 1. Impor 'useDispatch'
 import { useNavigate } from 'react-router-dom'; // <-- 2. Impor 'useNavigate'
 import { selectCurrentUser, logOut } from '../../../services/authSlice'; // <-- 3. Impor instruksi 'logOut'
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button'; // <-- 4. Impor komponen 'Button'
 
-const WelcomeHeader = ({ className = '' }) => {
+const LAST_LOCATION_KEY = 'aitani:last-location-v1';
+const LAST_LOCATION_LABEL_KEY = 'aitani:last-location-label-v1';
+const GEO_TIMEOUT_MS = 8000;
+const GEO_LANGUAGE = 'id';
+const REVERSE_GEO_URL = 'https://api.bigdatacloud.net/data/reverse-geocode-client';
+
+const roundCoord = (value, digits = 3) =>
+  Number.isFinite(value) ? Number(value.toFixed(digits)) : null;
+
+const readCachedLocation = () => {
+  try {
+    const raw = localStorage.getItem(LAST_LOCATION_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    const lat = Number(data?.latitude);
+    const lng = Number(data?.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return { lat, lng };
+  } catch {
+    return null;
+  }
+};
+
+const writeCachedLocation = (lat, lng) => {
+  try {
+    localStorage.setItem(
+      LAST_LOCATION_KEY,
+      JSON.stringify({
+        latitude: String(lat),
+        longitude: String(lng),
+        updatedAt: new Date().toISOString(),
+      })
+    );
+  } catch {
+    // ignore
+  }
+};
+
+const readCachedLocationLabel = () => {
+  try {
+    const raw = localStorage.getItem(LAST_LOCATION_LABEL_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || !data.label) return null;
+    return data;
+  } catch {
+    return null;
+  }
+};
+
+const writeCachedLocationLabel = (lat, lng, label) => {
+  try {
+    localStorage.setItem(
+      LAST_LOCATION_LABEL_KEY,
+      JSON.stringify({
+        lat: roundCoord(lat),
+        lng: roundCoord(lng),
+        label,
+        updatedAt: new Date().toISOString(),
+      })
+    );
+  } catch {
+    // ignore
+  }
+};
+
+const formatCoords = (lat, lng) => `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+
+const buildLocationLabel = (result) => {
+  if (!result) return '';
+  const parts = [
+    result.locality,
+    result.city,
+    result.principalSubdivision,
+    result.countryName,
+    result.country,
+    result.admin2,
+    result.admin1,
+  ]
+    .map((p) => (typeof p === 'string' ? p.trim() : ''))
+    .filter(Boolean);
+
+  const seen = new Set();
+  const unique = [];
+  for (const part of parts) {
+    const key = part.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(part);
+  }
+  return unique.slice(0, 3).join(', ');
+};
+
+const WelcomeHeader = ({ className = '', userPos = null }) => {
   const currentUser = useSelector(selectCurrentUser);
   const dispatch = useDispatch(); // <-- 5. Siapkan 'dispatch'
   const navigate = useNavigate(); // <-- 6. Siapkan 'navigate'
+  const [locationLabel, setLocationLabel] = useState(null);
 
   // Fungsi yang akan dijalankan saat tombol logout diklik
   const handleLogout = () => {
@@ -20,7 +114,6 @@ const WelcomeHeader = ({ className = '' }) => {
   
   // Data statis yang belum ada di profil pengguna, kita biarkan sebagai mock.
   const mockData = {
-    location: "Desa Oesao, Kupang",
     lastActivity: new Date(Date.now() - 3 * 60 * 60 * 1000),
     totalFields: 3,
     activeCrops: 2
@@ -47,6 +140,68 @@ const WelcomeHeader = ({ className = '' }) => {
     if (hours > 0) return `${hours} jam yang lalu`;
     return 'Baru saja aktif';
   };
+
+  useEffect(() => {
+    let isActive = true;
+    const controller = new AbortController();
+
+    const resolveLocation = async () => {
+      const lat = userPos?.lat;
+      const lng = userPos?.lng;
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        writeCachedLocation(lat, lng);
+        setLocationLabel(formatCoords(lat, lng));
+      } else {
+        const cached = readCachedLocation();
+        if (cached) {
+          setLocationLabel(formatCoords(cached.lat, cached.lng));
+          return;
+        }
+        setLocationLabel(null);
+        return;
+      }
+
+      const latValue = Number(lat);
+      const lngValue = Number(lng);
+      const latKey = roundCoord(latValue);
+      const lngKey = roundCoord(lngValue);
+      const cachedLabel = readCachedLocationLabel();
+      if (cachedLabel && cachedLabel.lat === latKey && cachedLabel.lng === lngKey) {
+        setLocationLabel(cachedLabel.label);
+        return;
+      }
+
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+
+      const url = new URL(REVERSE_GEO_URL);
+      url.searchParams.set('latitude', String(latValue));
+      url.searchParams.set('longitude', String(lngValue));
+      url.searchParams.set('localityLanguage', GEO_LANGUAGE);
+
+      const timeout = setTimeout(() => controller.abort(), GEO_TIMEOUT_MS);
+      try {
+        const resp = await fetch(url.toString(), { signal: controller.signal });
+        if (!resp.ok) return;
+        const data = await resp.json().catch(() => null);
+        const label = buildLocationLabel(data);
+        if (!label) return;
+        if (!isActive) return;
+        setLocationLabel(label);
+        writeCachedLocationLabel(latValue, lngValue, label);
+      } catch {
+        // ignore
+      } finally {
+        clearTimeout(timeout);
+      }
+    };
+
+    resolveLocation();
+
+    return () => {
+      isActive = false;
+      controller.abort();
+    };
+  }, [userPos]);
 
   return (
     <div className={`bg-gradient-to-r from-primary/5 to-secondary/5 rounded-2xl p-6 ${className}`}>
@@ -79,7 +234,7 @@ const WelcomeHeader = ({ className = '' }) => {
           <div className="space-y-2">
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <Icon name="MapPin" size={16} />
-              <span>{mockData.location}</span>
+              <span>{locationLabel || 'Lokasi belum tersedia'}</span>
             </div>
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <Icon name="Clock" size={16} />

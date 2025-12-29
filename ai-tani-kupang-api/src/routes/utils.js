@@ -50,13 +50,11 @@ export const json = (data, status = 200, env, request, extra = {}) =>
 export function buildPhotoUrl(request, env, key) {
     const reqUrl = new URL(request.url);
     const isLocal = ["127.0.0.1", "localhost"].includes(reqUrl.hostname);
-    const bucket = env.R2_BUCKET || "aitaniweb-photos";
-    const localBase = (env.R2_LOCAL_BASE || `http://127.0.0.1:8787/r2`).replace(/\/+$/, "");
     const publicBase = (env.PUBLIC_R2_BASE_URL || "").replace(/\/+$/, "");
-    if (isLocal) {
-        return `${localBase}/${bucket}/${encodeURI(key)}`;
+    const origin = reqUrl.origin;
+    if (isLocal || !publicBase) {
+        return `${origin}/api/photos/${encodeURI(key)}`;
     }
-    if (!publicBase) return null;
     return `${publicBase}/${encodeURI(key)}`;
 }
 

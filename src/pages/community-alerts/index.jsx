@@ -1,6 +1,6 @@
 // src/pages/community-alerts/index.jsx
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useGetAlertsQuery } from '../../services/alertsApi';
 import { getQueuedRequests, requestSyncNow } from '../../offline/queueService';
 import Icon from '../../components/AppIcon';
@@ -28,6 +28,7 @@ function haversineKm(a, b) {
 
 export default function CommunityAlerts() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [filters, setFilters] = useState({ pestType: 'all', severity: 'all', distance: 'all', timeWindow: '24' });
   const [search, setSearch] = useState('');
@@ -36,6 +37,7 @@ export default function CommunityAlerts() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
   const [userPos, setUserPos] = useState(null);
+  const [reportDraft, setReportDraft] = useState(null);
 
   const { data: allAlertsRaw = [], isLoading, isError, error, refetch } =
     useGetAlertsQuery(undefined, { skip: !isOnline });
@@ -108,6 +110,17 @@ export default function CommunityAlerts() {
   }, []);
   useEffect(() => { if (isOnline) refetch(); }, [isOnline, refetch]);
 
+  useEffect(() => {
+    if (!location?.state?.reportDraft) return;
+    setReportDraft(location.state.reportDraft);
+  }, [location]);
+
+  useEffect(() => {
+    if (!location?.state?.openReport) return;
+    setIsReportModalOpen(true);
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location, navigate]);
+
   // Cek antrean offline
   useEffect(() => {
     const checkQueue = async () => {
@@ -175,7 +188,10 @@ export default function CommunityAlerts() {
                 variant="default"
                 iconName="Plus"
                 iconPosition="left"
-                onClick={() => setIsReportModalOpen(true)}
+                onClick={() => {
+                  setReportDraft(null);
+                  setIsReportModalOpen(true);
+                }}
                 className="shrink-0 rounded-xl"
               >
                 Laporkan
@@ -322,7 +338,10 @@ export default function CommunityAlerts() {
                     <h3 className="text-xl font-bold text-foreground mb-2">Tidak ada peringatan</h3>
                     <p className="text-muted-foreground mb-6">Coba ubah filter atau laporkan hama baru</p>
                     <Button variant="outline" iconName="Plus" iconPosition="left"
-                      onClick={() => setIsReportModalOpen(true)} className="rounded-xl">
+                      onClick={() => {
+                        setReportDraft(null);
+                        setIsReportModalOpen(true);
+                      }} className="rounded-xl">
                       Buat Laporan Baru
                     </Button>
                   </div>
@@ -339,7 +358,11 @@ export default function CommunityAlerts() {
         </div>
 
         {/* Modals */}
-        <ReportPestModal isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)} />
+        <ReportPestModal
+          isOpen={isReportModalOpen}
+          onClose={() => setIsReportModalOpen(false)}
+          prefill={reportDraft}
+        />
         <AlertDetailModal alert={selectedAlert} isOpen={!!selectedAlert} onClose={() => setSelectedAlert(null)} />
 
         {/* NAV MOBILE */}

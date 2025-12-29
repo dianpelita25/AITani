@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../../components/ui/Button';
 
-const ActionButtons = ({ onShare, onSaveAllPlans, hasRecommendations }) => {
+const ActionButtons = ({ onShare, onSaveAllPlans, hasRecommendations, onReportToCommunity, isReporting }) => {
   const navigate = useNavigate();
 
   return (
@@ -56,6 +56,19 @@ const ActionButtons = ({ onShare, onSaveAllPlans, hasRecommendations }) => {
       </div>
       
       {/* Community Action */}
+      {onReportToCommunity && (
+        <Button
+          variant="outline"
+          fullWidth
+          iconName="AlertTriangle"
+          iconPosition="left"
+          onClick={onReportToCommunity}
+          loading={!!isReporting}
+          disabled={!!isReporting}
+        >
+          Simpan ke Komunitas
+        </Button>
+      )}
       <Button
         variant="ghost"
         fullWidth

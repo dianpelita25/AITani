@@ -2,10 +2,13 @@
 
 Platform pendamping petani: diagnosis foto hybrid (online + lokal), rencana tindakan lapang, antrean offline, serta asisten belanja obat & alat. Frontend React/Vite, backend Cloudflare Worker (D1/R2/KV), dengan alur yang aman untuk offline/online.
 
+## Progress log
+Lihat `PROGRESS.md` untuk ringkasan keadaan aplikasi saat ini, perubahan terakhir, konfigurasi aktif, dan next steps.
+
 ## Status ringkas (2026)
 - Diagnosis hybrid: online-first (Gemini/custom endpoint) dengan fallback TF.js lokal + antrean offline.
-- Precheck foto: server menilai kualitas/objek tanaman sebelum diagnosa; UI menampilkan kartu "Kualitas foto" beserta saran.
-- Planner lapang: backend menghasilkan rencana tindakan bertahap (immediate/this_week/next_weeks/monitoring); UI menampilkan fase & tombol "Jadikan tugas".
+- Precheck foto: bisa diaktifkan/nonaktifkan untuk hemat token (lihat `PROGRESS.md`).
+- Planner lapang: saat ini on-demand (lihat `PROGRESS.md`).
 - Asisten Toko: endpoint `/api/shop-assistant` + tombol "Hitung belanja obat & alat" (badge AI, offline-safe, toast non-blocking).
 - Weather snapshot: Open-Meteo (fallback mock) otomatis dikirim ke AI & ditampilkan sebagai badge.
 - Offline-first: antrean IndexedDB untuk diagnosis/farm tasks tetap berjalan, replay saat online.
